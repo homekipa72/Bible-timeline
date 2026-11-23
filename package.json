@@ -1,0 +1,13 @@
+{
+  "name": "malssumgil",
+  "version": "1.0.0",
+  "private": true,
+  "description": "말씀의 길 — 한국천주교주교회의 성경 통독 웹앱",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -48,7 +48,13 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <main>
 <section id="home"><div class="eyebrow">DAILY SCRIPTURE JOURNEY</div><div class="h1">오늘, 말씀과 함께</div><p class="muted" id="today"></p>
 <div class="grid"><div class="card">전체 통독 통독 진행률<div class="metric" id="pct">0%</div><div class="progress"><span id="bar" style="width:0%"></span></div></div><div class="card">완료한 분량<div class="metric" id="done">0</div></div><div class="card">통독 기간<div class="metric" id="daysLabel">365일</div></div></div>
-<div class="card"><div class="eyebrow">TODAY'S READING</div><h2 id="todayRange">오늘의 성경 읽기</h2><p class="muted" id="todayHint">통독 계획에 따라 오늘 읽을 분량을 안내합니다.</p><button onclick="view('read')">성경 읽기</button> <button class="alt" onclick="completeToday()">오늘 분량 완료</button></div>
+<div class="card"><div class="eyebrow">TODAY'S READING</div><h2 id="todayRange">오늘의 성경 읽기</h2><p class="muted" id="todayHint">통독 계획에 따라 오늘 읽을 분량을 안내합니다.</p>
+<div id="todayList" style="margin:12px 0;display:flex;flex-direction:column;gap:8px"></div>
+<div class="row" style="flex-wrap:wrap;gap:8px">
+<button onclick="view('read')">성경 읽기</button>
+<button class="alt" onclick="completeToday()">오늘 분량 완료</button>
+</div>
+</div>
 <div class="card"><h3>한국천주교주교회의 성경</h3><p>공식 한국어 가톨릭 성경 본문을 불러와 이 기기에 장별로 저장합니다. 한 번 불러온 장은 다음부터 오프라인에서도 읽을 수 있습니다.</p><div class="notice">본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a></div></div>
 </section>
 <section id="read" class="hidden"><div class="eyebrow">BIBLE READER</div><div class="h1">성경 읽기</div><p class="muted" id="readerTitle">한국천주교주교회의 성경 본문</p>
@@ -61,25 +67,86 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <p>원하는 범위·기간·시작일을 정하고, 필요하면 개인 맞춤으로 더 세밀하게 조정할 수 있습니다. 시편은 ‘편’으로 표기됩니다.</p>
 <div class="row">
 <label>범위/순서 <select id="planType" onchange="onPlanTypeChange()">
-<option value="all">전체 성경 (정경 순서)</option>
-<option value="ot">구약만</option>
-<option value="nt">신약만</option>
-<option value="chrono">역대순 (12시대)</option>
-<option value="psalms">시편만</option>
-<option value="gospels">복음서만</option>
-<option value="custom">개인 맞춤 (시대 선택)</option>
+<option value="all">전체통독</option>
+<option value="ot">구약</option>
+<option value="nt">신약</option>
+<option value="chrono">연대순</option>
+<option value="psalms">시편</option>
+<option value="gospels">복음서</option>
+<option value="custom">시대 선택</option>
+<option value="customBooks">개별 선택</option>
 </select></label>
 <label>기간 <select id="days" onchange="onDaysChange()"><option>90</option><option>180</option><option selected>365</option><option>730</option><option value="customDays">직접 입력</option></select></label>
 <label id="customDaysWrap" class="hidden">일수 <input type="number" id="customDays" min="7" max="2000" value="365" onchange="preview()" style="width:80px"></label>
 <label>시작일 <input type="date" id="start" onchange="preview()"></label>
 <button onclick="savePlan()">계획 저장</button>
 </div>
+
+<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+<div class="eyebrow" style="margin-bottom:8px">AUTO PLAN</div>
+<h3 style="margin:0 0 8px;font:20px Georgia;color:var(--navy)">통독 계획 자동 생성</h3>
+<p class="small muted">현재 선택한 범위(전체통독·구약·연대순 등)를 기준으로 기간을 자동 계산합니다.</p>
+<div class="row" style="flex-wrap:wrap;gap:10px;margin-top:10px">
+<label>생성 방식
+<select id="autoMode" onchange="onAutoModeChange()">
+<option value="days">총 일수로</option>
+<option value="perDay">하루 분량으로</option>
+<option value="endDate">종료일로</option>
+</select>
+</label>
+<label id="autoDaysWrap">목표 일수 <input type="number" id="autoDays" min="7" max="2000" value="365" style="width:90px"></label>
+<label id="autoPerDayWrap" class="hidden">하루 장(편) 수 <input type="number" id="autoPerDay" min="1" max="50" value="3" style="width:70px"></label>
+<label id="autoEndWrap" class="hidden">종료일 <input type="date" id="autoEnd"></label>
+</div>
+<div class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px">
+<button type="button" class="alt" onclick="autoPlanPreset('90')">90일</button>
+<button type="button" class="alt" onclick="autoPlanPreset('180')">180일</button>
+<button type="button" class="alt" onclick="autoPlanPreset('365')">1년</button>
+<button type="button" class="alt" onclick="autoPlanPreset('730')">2년</button>
+<button type="button" class="alt" onclick="autoPlanPreset('per:1')">하루 1장</button>
+<button type="button" class="alt" onclick="autoPlanPreset('per:3')">하루 3장</button>
+<button type="button" class="alt" onclick="autoPlanPreset('per:5')">하루 5장</button>
+</div>
+<div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+<button type="button" onclick="generateAutoPlan(false)">미리보기 생성</button>
+<button type="button" onclick="generateAutoPlan(true)">생성 후 저장</button>
+</div>
+<div id="autoPlanResult" class="small" style="margin-top:12px"></div>
+</div>
+
 <div id="customPeriods" class="hidden" style="margin-top:14px">
-<p class="small muted">포함할 시대를 고르세요. (역대순 장 순서를 유지한 채 선택한 시대만 읽습니다)</p>
-<div id="periodChecks" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:8px"></div>
+<p class="small muted">포함할 <b>시대</b>를 고르세요. 연대순 장 순서를 유지한 채 선택한 시대만 읽습니다.</p>
+<div id="periodChecks" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"></div>
+</div>
+<div id="customBooksPanel" class="hidden" style="margin-top:14px">
+<p class="small muted">포함할 <b>책</b>을 고르세요. 정경 순서(창세기→묵시록)로 읽습니다.</p>
+<div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+<button type="button" class="alt" onclick="selectAllCustomBooks(true)">전체 선택</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks(false)">전체 해제</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('ot')">구약만</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('nt')">신약만</button>
+</div>
+<div id="bookChecks" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:10px;max-height:280px;overflow:auto;padding:4px"></div>
 </div>
 <div id="preview" style="margin-top:16px"></div>
-<p class="small muted" style="margin-top:12px">역대순·개인 맞춤은 12시대를 따릅니다. 창세기·열왕기 등은 장 단위로 시대가 나뉩니다.</p>
+<p class="small muted" style="margin-top:12px">연대순·시대 선택은 12시대 흐름을 따릅니다. 창세기·열왕기 등은 장 단위로 시대가 나뉩니다.</p>
+<details id="chronoBookList" style="margin-top:12px">
+<summary style="cursor:pointer;font-weight:600;color:var(--navy)">연대순에 포함된 성경 목록 (12시대)</summary>
+<div class="small" style="margin-top:10px;line-height:1.55">
+<p><b style="color:#0d9488">1. 초기 세계</b> — 창세기 1–11장</p>
+<p><b style="color:#6b21a8">2. 성조 시대</b> — 창세기 12–50장, 욥기</p>
+<p><b style="color:#dc2626">3. 이집트와 탈출</b> — 탈출기, 레위기</p>
+<p><b style="color:#a16207">4. 광야 생활</b> — 민수기, 신명기</p>
+<p><b style="color:#16a34a">5. 정복과 판관 시대</b> — 여호수아기, 판관기, 룻기</p>
+<p><b style="color:#7c3aed">6. 왕국 시대</b> — 사무엘기 상·하권, 열왕기 상권 1–11장, 역대기 상권, 시편, 잠언, 코헬렛, 아가</p>
+<p><b style="color:#1f2937">7. 분열 왕국</b> — 열왕기 상권 12장 이후, 열왕기 하권 1–16장, 역대기 하권, 아모스서, 호세아서, 요나서, 미카서, 이사야서, 나훔서, 스바니야서, 하바쿡서</p>
+<p><b style="color:#0ea5e9">8. 유배 시대</b> — 열왕기 하권 17–25장, 예레미야서, 애가, 바룩서, 에제키엘서, 다니엘서, 토빗기, 오바드야서</p>
+<p><b style="color:#eab308">9. 귀환 시대</b> — 에즈라기, 느헤미야기, 에스테르기, 유딧기, 하까이서, 즈카르야서, 말라키서, 요엘서</p>
+<p><b style="color:#ea580c">10. 마카베오 항쟁</b> — 마카베오기 상·하권, 집회서, 지혜서</p>
+<p><b style="color:#ca8a04">11. 메시아의 성취</b> — 루카 복음서, 마태오 복음서, 마르코 복음서, 요한 복음서</p>
+<p><b style="color:#64748b">12. 교회 시대</b> — 사도행전, 야고보 서간, 갈라티아·테살로니카·코린토·로마·에페소·필리피·콜로새 서간, 티모테오·티토·필레몬 서간, 히브리인들에게 보낸 서간, 베드로·요한·유다 서간, 요한 묵시록</p>
+</div>
+</details>
 <div id="periodLegend" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:12px;font-size:12px">
 <div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#0d9488"></span>1 초기 세계</div>
 <div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:3px;background:#6b21a8"></span>2 성조 시대</div>
@@ -102,6 +169,10 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <div class="grid"><div class="card">완료한 분량<div class="metric" id="sDone">0</div></div><div class="card">진행률<div class="metric" id="sPct">0%</div></div><div class="card">묵상 노트<div class="metric" id="sNotes">0</div></div></div>
 <div class="grid"><div class="card">읽음 표시한 절<div class="metric" id="sVerses">0</div></div><div class="card">완료한 분량<div class="metric" id="sChapters">0</div></div><div class="card">절 기록 책 수<div class="metric" id="sBooks">0</div></div></div>
 
+<div class="card"><h3>현재 통독 계획 진행</h3>
+<p class="small muted" id="planProgressLabel">저장된 계획 기준으로 항목별 진도를 표시합니다.</p>
+<div id="planItemProgress" style="margin-top:10px"></div>
+</div>
 <div class="card"><h3>12시대 진도</h3>
 <div style="position:relative;height:320px;margin-top:8px"><canvas id="periodChart"></canvas></div>
 <div id="periodProgress" class="small" style="margin-top:8px"></div>
@@ -141,7 +212,7 @@ const books=[
 const $=id=>document.getElementById(id);
 function unit(bi){return books[bi][3]==='Ps'?'편':'장'}
 function chLabel(bi,ch){return books[bi][0]+' '+ch+unit(bi)}
-// 대략적 역대순 책 인덱스 (가톨릭 성경 기준 간이 순서)
+// 연대순 책 인덱스 (가톨릭 성경 기준)
 // Great Adventure 스타일 12시대 (색상 + 핵심 구간)
 const periods = [
   {id:1, name:'초기 세계', color:'#0d9488', desc:'창조와 인류의 시작'},
@@ -158,7 +229,7 @@ const periods = [
   {id:12, name:'교회 시대', color:'#f8fafc', desc:'성령과 교회의 탄생'}
 ];
 
-// 장 단위 역대순: [bookIndex, fromChapter, toChapter, periodId]
+// 장 단위 연대순: [bookIndex, fromChapter, toChapter, periodId]
 // toChapter inclusive. books[bi][2] is total chapters.
 const chronoRanges = [
   // 1. 초기 세계
@@ -201,6 +272,24 @@ const chronoRanges = [
 
 let planType=localStorage.planType||'all';
 let customPeriodSet=JSON.parse(localStorage.customPeriods||'[1,2,3,4,5,6,7,8,9,10,11,12]');
+let customBookSet=JSON.parse(localStorage.customBooks||'null');
+if(!Array.isArray(customBookSet)) customBookSet=[...Array(books.length).keys()];
+// 시대별 포함 성경 안내 (표시용)
+const periodBookLabels={
+  1:'창세기 1–11장',
+  2:'창세기 12–50장, 욥기',
+  3:'탈출기, 레위기',
+  4:'민수기, 신명기',
+  5:'여호수아기, 판관기, 룻기',
+  6:'사무엘 상·하, 열왕기 상 1–11장, 역대기 상, 시편, 잠언, 코헬렛, 아가',
+  7:'열왕기 상 12장–, 열왕기 하 1–16장, 역대기 하, 아모스·호세아·요나·미카·이사야·나훔·스바니야·하바쿡',
+  8:'열왕기 하 17–25장, 예레미야·애가·바룩·에제키엘·다니엘, 토빗, 오바드야',
+  9:'에즈라·느헤미야·에스테르·유딧, 하까이·즈카르야·말라키·요엘',
+  10:'마카베오 상·하, 집회서, 지혜서',
+  11:'루카·마태오·마르코·요한 복음서',
+  12:'사도행전, 서간들, 요한 묵시록'
+};
+
 let planSeq=[]; // [{book,chapter,period}, ...]
 function rebuildPlanSeq(){
   planSeq=[];
@@ -218,7 +307,9 @@ function rebuildPlanSeq(){
     else if(planType==='nt') idxs=[...Array(27).keys()].map(i=>i+46);
     else if(planType==='psalms') idxs=[22];
     else if(planType==='gospels') idxs=[46,47,48,49];
+    else if(planType==='customBooks') idxs=customBookSet.slice().map(Number).filter(bi=>bi>=0&&bi<books.length).sort((a,b)=>a-b);
     else idxs=[...Array(books.length).keys()];
+    if(planType==='customBooks' && !idxs.length) idxs=[0]; // 최소 1권 방지용 폴백 없음 — 빈 계획 허용하되 preview 대비
     for(const bi of idxs){
       const n=books[bi][2];
       for(let c=1;c<=n;c++) planSeq.push({book:bi,chapter:c,period:0});
@@ -231,7 +322,7 @@ let verseTotal=JSON.parse(localStorage.verseTotal_v1||'{}');let verseRead=JSON.p
 $('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 $('days').value=days;$('start').value=start;$('ndate').value=new Date().toISOString().slice(0,10);
 $('verseBook').innerHTML=books.map((b,n)=>'<option value="'+n+'">'+b[0]+'</option>').join('');
-function view(id){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===id));if(id==='plan')preview();if(id==='notes')renderNotes();if(id==='stats')stats();if(id==='read')loadChapter(false)}
+function view(id){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));$(id).classList.remove('hidden');document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===id));if(id==='home')dashboard();if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}preview();}if(id==='notes')renderNotes();if(id==='stats')stats();if(id==='read')loadChapter(false)}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>view(b.dataset.v));
 function db(){return new Promise((ok,no)=>{let r=indexedDB.open('malssumgil-bible',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('chapters'))r.result.createObjectStore('chapters')};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function cacheGet(key){let d=await db();return new Promise((ok,no)=>{let r=d.transaction('chapters').objectStore('chapters').get(key);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
@@ -242,7 +333,7 @@ function selectBook(index){selectedBook=Math.max(0,Math.min(books.length-1,index
 function selectChapter(ch){selectedChapter=+ch;loadChapter(false)}
 function moveChapter(delta){let c=selectedChapter+delta,b=selectedBook;if(c<1){if(b===0)return;b--;c=books[b][2]}else if(c>books[b][2]){if(b===books.length-1)return;b++;c=1}selectedBook=b;selectedChapter=c;$('verseBook').value=String(b);$('verseChapter').innerHTML=Array.from({length:books[b][2]},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'장</option>').join('');$('verseChapter').value=String(c);loadChapter(false)}
 function verseKey(b,c){return b+':'+c}
-function saveVerseData(){localStorage.verseRead_v1=JSON.stringify(verseRead);localStorage.chapterRead_v1=JSON.stringify(chapterRead);if(periodChart||testamentChart||bookChart)updateCharts()}
+function saveVerseData(){localStorage.verseRead_v1=JSON.stringify(verseRead);localStorage.chapterRead_v1=JSON.stringify(chapterRead);if(periodChart||testamentChart||bookChart)updateCharts();if($('todayList'))renderTodayList()}
 function htmlToText(root){let out='';const blocks=new Set(['ADDRESS','ARTICLE','ASIDE','BLOCKQUOTE','BR','DD','DIV','DL','DT','H1','H2','H3','H4','LI','OL','P','SECTION','SPAN','TABLE','TR','UL']);function walk(node){if(node.nodeType===3){out+=node.nodeValue;return}if(node.nodeType!==1)return;const tag=node.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT')return;if(blocks.has(tag))out+='\n';for(const child of node.childNodes)walk(child);if(blocks.has(tag))out+='\n'}walk(root);return out.replace(/\n{3,}/g,'\n\n')}
 function extractVerses(html,bi=selectedBook,ch=selectedChapter){const doc=new DOMParser().parseFromString(html,'text/html');let text=htmlToText(doc.body).replace(/\r/g,'').replace(/\u00a0/g,' ');const headingRe=new RegExp(books[bi][0]+'\\s*'+ch+'\\s*'+'(?:장|편)');let headingMatch=text.match(headingRe);if(!headingMatch)throw new Error('본문 제목을 찾을 수 없습니다. 공식 사이트의 페이지 구성이 변경되었을 수 있습니다.');let body=text.slice(headingMatch.index+headingMatch[0].length);let end=body.search(/\n성경\s*\n(?:구약|신약)/);if(end>=0)body=body.slice(0,end);let lines=body.split('\n').map(x=>x.trim()).filter(Boolean),verses=[],started=false;for(let line of lines){if(/^\d{1,3}$/.test(line)){verses.push({n:+line,text:''});started=true;continue}let inline=line.match(/^(\d{1,3})\s+(.+)$/);if(inline){verses.push({n:+inline[1],text:inline[2]});started=true;continue}if(started){if(/^(함께보기|장 바로가기|성경|구약|신약)$/.test(line))break;verses[verses.length-1].text+=(verses[verses.length-1].text?' ':'')+line}}
 verses=verses.filter(v=>v.n>0&&v.text);if(!verses.length)throw new Error('본문 절을 구분하지 못했습니다.');return verses}
@@ -260,9 +351,67 @@ function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if
 function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
 function dailyRange(){let elapsed=Math.max(1,Math.floor((Date.now()-new Date(start+'T00:00:00'))/86400000)+1),day=Math.min(days,elapsed),total=totalChapters(),a=Math.floor((day-1)*total/days),z=Math.max(a+1,Math.floor(day*total/days));return{day,a,z}}
-function dashboard(){let total=totalChapters(),completed=Object.keys(chapterRead).filter(k=>chapterRead[k]).length,r=dailyRange();$('pct').textContent=Math.round(completed/total*100)+'%';$('bar').style.width=(completed/total*100)+'%';$('done').textContent=completed;$('daysLabel').textContent=days+'일';let first=flatChapter(r.a),last=flatChapter(Math.min(total-1,r.z-1));$('todayRange').textContent=chLabel(first.book,first.chapter)+(r.z-r.a>1?' – '+chLabel(last.book,last.chapter):'');let hint='제 '+r.day+'일차 · '+(r.z-r.a)+'개 분량 읽기 권장';
-if(planType==='chrono'&&first.period){const p=periods[first.period-1];hint+=' · '+p.name}
-$('todayHint').textContent=hint;}
+function getTodayItems(){
+  const r=dailyRange(), items=[];
+  const total=totalChapters();
+  if(!total) return items;
+  const z=Math.min(r.z, total);
+  for(let i=r.a;i<z;i++){
+    const p=flatChapter(i);
+    const key=verseKey(p.book,p.chapter);
+    items.push({
+      index:i,
+      book:p.book,
+      chapter:p.chapter,
+      period:p.period||0,
+      key,
+      done:!!chapterRead[key],
+      label:chLabel(p.book,p.chapter)
+    });
+  }
+  return items;
+}
+function openReading(bi, ch){
+  selectBook(+bi);
+  selectChapter(+ch);
+  view('read');
+}
+function renderTodayList(){
+  const el=$('todayList');
+  if(!el) return;
+  const items=getTodayItems();
+  if(!items.length){
+    el.innerHTML='<p class="muted small">오늘 배정된 분량이 없습니다. 통독 계획에서 계획을 저장해 주세요.</p>';
+    return;
+  }
+  el.innerHTML=items.map(it=>{
+    const periodName=(it.period&&periods[it.period-1])?periods[it.period-1].name:'';
+    const bg=it.done?'#e8f5e9':'#f5f2eb';
+    const border=it.done?'#a5d6a7':'var(--line)';
+    return '<button type="button" onclick="openReading('+it.book+','+it.chapter+')" style="text-align:left;width:100%;padding:12px 14px;border-radius:10px;border:1px solid '+border+';background:'+bg+';cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px"><span><b>'+it.label+'</b>'+(periodName?' <span class="small muted">· '+periodName+'</span>':'')+'</span><span class="small" style="color:'+(it.done?'#2e7d32':'#78818a')+'">'+(it.done?'완료':'읽기')+'</span></button>';
+  }).join('');
+}
+function dashboard(){
+  let total=totalChapters(),completed=Object.keys(chapterRead).filter(k=>chapterRead[k]).length,r=dailyRange();
+  $('pct').textContent=total?Math.round(completed/total*100)+'%':'0%';
+  $('bar').style.width=(total?completed/total*100:0)+'%';
+  $('done').textContent=completed;
+  $('daysLabel').textContent=days+'일';
+  const items=getTodayItems();
+  if(items.length){
+    const first=items[0], last=items[items.length-1];
+    $('todayRange').textContent=first.label+(items.length>1?' – '+last.label:'');
+    let hint='제 '+r.day+'일차 · '+items.length+'개 분량 · 항목을 누르면 성경 읽기로 이동합니다';
+    if(planType==='chrono'||planType==='custom'){
+      if(first.period&&periods[first.period-1]) hint+=' · '+periods[first.period-1].name;
+    }
+    $('todayHint').textContent=hint;
+  } else {
+    $('todayRange').textContent='오늘의 성경 읽기';
+    $('todayHint').textContent='통독 계획에 따라 오늘 읽을 분량을 안내합니다.';
+  }
+  renderTodayList();
+}
 function preview(){days=effectiveDays();start=$('start').value||start;let r=dailyRange(),first=flatChapter(r.a),last=flatChapter(Math.min(totalChapters()-1,r.z-1));
 let periodHtml='';
 if(planType==='chrono'&&first.period){
@@ -275,22 +424,25 @@ function onDaysChange(){const c=$('days').value==='customDays';$('customDaysWrap
 function onPlanTypeChange(){
   planType=$('planType').value;
   $('customPeriods').classList.toggle('hidden', planType!=='custom');
+  if($('customBooksPanel')) $('customBooksPanel').classList.toggle('hidden', planType!=='customBooks');
   const isCustomDays=$('days').value==='customDays';
   $('customDaysWrap').classList.toggle('hidden', !isCustomDays);
   if(planType==='custom') renderPeriodChecks();
-  // 계획 시퀀스 구성은 Worker에서 비동기 처리
+  if(planType==='customBooks') renderBookChecks();
   rebuildPlanSeqAsync().then(()=>preview()).catch(()=>{rebuildPlanSeq();preview()});
 }
 async function rebuildPlanSeqAsync(){
   if (!_workerMetaReady) await initWorkerMeta();
-  const seq = await workerCall('buildPlan', { planType, customPeriodSet });
+  const seq = await workerCall('buildPlan', { planType, customPeriodSet, customBookSet });
   planSeq = seq;
   return seq;
 }
 function renderPeriodChecks(){
+  if(!$('periodChecks')) return;
   $('periodChecks').innerHTML=periods.map(p=>{
     const on=customPeriodSet.includes(p.id);
-    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#f7f4ed"><input type="checkbox" data-pid="'+p.id+'" '+(on?'checked':'')+' onchange="toggleCustomPeriod('+p.id+',this.checked)"><span style="width:10px;height:10px;border-radius:2px;background:'+p.color+';border:'+(p.id===12?'1px solid #cbd5e1':'none')+'"></span>'+p.name+'</label>';
+    const booksLabel=periodBookLabels[p.id]||'';
+    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)"><input type="checkbox" style="margin-top:3px" data-pid="'+p.id+'" '+(on?'checked':'')+' onchange="toggleCustomPeriod('+p.id+',this.checked)"><span style="flex:1"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+p.color+';border:'+(p.id===12?'1px solid #cbd5e1':'none')+';flex-shrink:0"></span><b>'+p.name+'</b></span><span class="small muted" style="display:block;margin-top:4px;line-height:1.45">'+booksLabel+'</span></span></label>';
   }).join('');
 }
 function toggleCustomPeriod(pid, on){
@@ -300,10 +452,134 @@ function toggleCustomPeriod(pid, on){
   rebuildPlanSeq();
   preview();
 }
+function renderBookChecks(){
+  if(!$('bookChecks')) return;
+  const set=new Set(customBookSet.map(Number));
+  $('bookChecks').innerHTML=books.map((b,bi)=>{
+    const on=set.has(bi);
+    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:#f7f4ed;font-size:13px"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleCustomBook('+bi+',this.checked)"><span>'+b[0]+'</span></label>';
+  }).join('');
+}
+function toggleCustomBook(bi, on){
+  customBookSet = customBookSet.filter(x=>x!==bi);
+  if(on) customBookSet.push(bi);
+  customBookSet.sort((a,b)=>a-b);
+  rebuildPlanSeq();
+  preview();
+}
+function selectAllCustomBooks(mode){
+  if(mode===true) customBookSet=[...Array(books.length).keys()];
+  else if(mode===false) customBookSet=[];
+  else if(mode==='ot') customBookSet=[...Array(46).keys()];
+  else if(mode==='nt') customBookSet=[...Array(27).keys()].map(i=>i+46);
+  renderBookChecks();
+  rebuildPlanSeq();
+  preview();
+}
 function effectiveDays(){
   if($('days').value==='customDays') return Math.max(7, Math.min(2000, +$('customDays').value||365));
   return +$('days').value;
 }
+function onAutoModeChange(){
+  const m=$('autoMode')&&$('autoMode').value;
+  if(!$('autoDaysWrap')) return;
+  $('autoDaysWrap').classList.toggle('hidden', m!=='days');
+  $('autoPerDayWrap').classList.toggle('hidden', m!=='perDay');
+  $('autoEndWrap').classList.toggle('hidden', m!=='endDate');
+}
+function autoPlanPreset(kind){
+  if(kind.startsWith('per:')){
+    if($('autoMode')) $('autoMode').value='perDay';
+    if($('autoPerDay')) $('autoPerDay').value=kind.slice(4);
+    onAutoModeChange();
+  } else {
+    if($('autoMode')) $('autoMode').value='days';
+    if($('autoDays')) $('autoDays').value=kind;
+    onAutoModeChange();
+  }
+  generateAutoPlan(false);
+}
+function setPlanDaysUI(n){
+  n=Math.max(7, Math.min(2000, Math.round(n)||365));
+  days=n;
+  if([90,180,365,730].includes(n)){
+    if($('days')) $('days').value=String(n);
+    if($('customDaysWrap')) $('customDaysWrap').classList.add('hidden');
+  } else {
+    if($('days')) $('days').value='customDays';
+    if($('customDays')) $('customDays').value=n;
+    if($('customDaysWrap')) $('customDaysWrap').classList.remove('hidden');
+  }
+}
+function sampleSchedule(numDays, maxRows){
+  maxRows=maxRows||7;
+  const total=totalChapters();
+  if(!total||!numDays) return '';
+  const rows=[];
+  const startDate=new Date(($('start')&&$('start').value||start)+'T00:00:00');
+  for(let day=1; day<=Math.min(numDays, maxRows); day++){
+    const a=Math.floor((day-1)*total/numDays);
+    const z=Math.max(a+1, Math.floor(day*total/numDays));
+    const first=flatChapter(a), last=flatChapter(Math.min(total-1, z-1));
+    const d=new Date(startDate); d.setDate(d.getDate()+day-1);
+    const ds=d.toISOString().slice(0,10);
+    rows.push('<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span class="muted">'+ds+' · '+day+'일차</span><span>'+chLabel(first.book,first.chapter)+(z-a>1?' – '+chLabel(last.book,last.chapter):'')+' <span class="muted">('+(z-a)+')</span></span></div>');
+  }
+  if(numDays>maxRows) rows.push('<p class="muted" style="margin-top:6px">… 이후 '+numDays+'일차까지 동일한 방식으로 배분됩니다.</p>');
+  return rows.join('');
+}
+function generateAutoPlan(doSave){
+  // 현재 범위로 planSeq 먼저 반영
+  planType=$('planType')?$('planType').value:planType;
+  if($('start')&&$('start').value) start=$('start').value;
+  else if($('start')&&!start) { start=new Date().toISOString().slice(0,10); $('start').value=start; }
+  rebuildPlanSeq();
+  const total=totalChapters();
+  const box=$('autoPlanResult');
+  if(!total){
+    if(box) box.innerHTML='<p style="color:#b91c1c">선택한 범위에 분량이 없습니다. 시대/책을 하나 이상 선택해 주세요.</p>';
+    return;
+  }
+  const mode=($('autoMode')&&$('autoMode').value)||'days';
+  let nDays;
+  if(mode==='perDay'){
+    const per=Math.max(1, Math.min(50, +($('autoPerDay')&&$('autoPerDay').value)||3));
+    nDays=Math.max(7, Math.ceil(total/per));
+  } else if(mode==='endDate'){
+    const endStr=$('autoEnd')&&$('autoEnd').value;
+    const startStr=($('start')&&$('start').value)||start||new Date().toISOString().slice(0,10);
+    if(!endStr){
+      if(box) box.innerHTML='<p style="color:#b91c1c">종료일을 입력해 주세요.</p>';
+      return;
+    }
+    const s=new Date(startStr+'T00:00:00'), e=new Date(endStr+'T00:00:00');
+    nDays=Math.floor((e-s)/86400000)+1;
+    if(nDays<7){
+      if(box) box.innerHTML='<p style="color:#b91c1c">시작일부터 종료일까지 최소 7일이 필요합니다.</p>';
+      return;
+    }
+    if(nDays>2000) nDays=2000;
+  } else {
+    nDays=Math.max(7, Math.min(2000, +($('autoDays')&&$('autoDays').value)||365));
+  }
+  setPlanDaysUI(nDays);
+  const perAvg=(total/nDays);
+  const html=
+    '<div style="padding:12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)">'+
+    '<div class="metric" style="font-size:22px">'+planTypeLabel(planType)+' · '+nDays+'일</div>'+
+    '<p style="margin:8px 0 0">총 <b>'+total+'</b>개 분량 · 하루 평균 <b>'+(Math.round(perAvg*10)/10)+'</b>장(편)</p>'+
+    '<p class="muted" style="margin:4px 0 10px">시작일 '+(($('start')&&$('start').value)||start)+'</p>'+
+    '<b class="small">앞부분 일정 미리보기</b>'+
+    sampleSchedule(nDays, 7)+
+    '</div>';
+  if(box) box.innerHTML=html;
+  preview();
+  dashboard();
+  if(doSave){
+    savePlan();
+  }
+}
+
 function savePlan(){
   days=effectiveDays();
   start=$('start').value;
@@ -312,16 +588,36 @@ function savePlan(){
   localStorage.start=start;
   localStorage.planType=planType;
   localStorage.customPeriods=JSON.stringify(customPeriodSet);
+  localStorage.customBooks=JSON.stringify(customBookSet);
   if($('days').value==='customDays') localStorage.customDaysValue=$('customDays').value;
   rebuildPlanSeq();
   dashboard();
+  if(typeof stats==='function') try{stats()}catch(e){}
   alert('통독 계획 저장 완료');
 }
 function completeToday(){let r=dailyRange();for(let i=r.a;i<r.z;i++){let p=flatChapter(i),key=verseKey(p.book,p.chapter);chapterRead[key]=true}saveVerseData();dashboard();stats();alert('오늘 분량을 완료로 기록했습니다.')}
 function quickNote(){let v=$('quick').value.trim();if(!v)return;notes.unshift({date:new Date().toISOString().slice(0,10),verse:chLabel(selectedBook,selectedChapter),reflection:v,resolution:''});localStorage.notes=JSON.stringify(notes);$('quick').value='';alert('메모 저장 완료')}
 function saveNote(){notes.unshift({date:$('ndate').value,verse:$('verse').value,reflection:$('reflection').value,resolution:$('resolution').value});localStorage.notes=JSON.stringify(notes);$('verse').value=$('reflection').value=$('resolution').value='';renderNotes();alert('묵상 저장 완료')}
 function safe(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function renderNotes(){$('noteList').innerHTML=notes.length?notes.map(n=>'<div class="card"><b>'+safe(n.date)+' · '+safe(n.verse)+'</b><p>'+safe(n.reflection)+'</p><small>'+safe(n.resolution)+'</small></div>').join(''):'저장한 묵상이 없습니다.'}
+function renderNotes(){
+  if(!$('noteList')) return;
+  if(!notes.length){
+    $('noteList').innerHTML='<p class="muted">저장한 묵상이 없습니다.</p>';
+    return;
+  }
+  $('noteList').innerHTML=notes.map((n,i)=>
+    '<div class="card" style="position:relative"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div style="flex:1"><b>'+safe(n.date)+' · '+safe(n.verse)+'</b><p>'+safe(n.reflection)+'</p><small>'+safe(n.resolution)+'</small></div><button type="button" class="alt" style="flex-shrink:0;padding:6px 10px;font-size:12px" onclick="deleteNote('+i+')">삭제</button></div></div>'
+  ).join('');
+}
+function deleteNote(i){
+  if(i<0||i>=notes.length) return;
+  const n=notes[i];
+  if(!confirm((n.date||'')+' 묵상을 삭제할까요?')) return;
+  notes.splice(i,1);
+  localStorage.notes=JSON.stringify(notes);
+  renderNotes();
+  if(typeof stats==='function') try{stats()}catch(e){}
+}
 
 
 // ========== Web Worker + 메시지 직렬화 최적화 ==========
@@ -417,6 +713,7 @@ self.onmessage = function(e) {
       if (!meta) throw new Error('meta not initialized');
       var planType = payload.planType;
       var customPeriodSet = payload.customPeriodSet || [];
+      var customBookSet = payload.customBookSet || [];
       var seq = [];
       var useChrono = (planType === 'chrono' || planType === 'custom');
       if (useChrono) {
@@ -439,7 +736,13 @@ self.onmessage = function(e) {
         else if (planType === 'nt') { for (i = 0; i < 27; i++) idxs.push(i + 46); }
         else if (planType === 'psalms') idxs = [22];
         else if (planType === 'gospels') idxs = [46, 47, 48, 49];
-        else { for (i = 0; i < meta.nBooks; i++) idxs.push(i); }
+        else if (planType === 'customBooks') {
+          for (i = 0; i < customBookSet.length; i++) {
+            var xb = Number(customBookSet[i]);
+            if (xb >= 0 && xb < meta.nBooks) idxs.push(xb);
+          }
+          idxs.sort(function(a,b){ return a - b; });
+        } else { for (i = 0; i < meta.nBooks; i++) idxs.push(i); }
         for (var j = 0; j < idxs.length; j++) {
           bi = idxs[j]; n = meta.bookChapters[bi];
           for (c = 1; c <= n; c++) seq.push({ book: bi, chapter: c, period: 0 });
@@ -590,7 +893,7 @@ function workerCall(type, payload, opts) {
           resolve(btoa(unescape(encodeURIComponent(raw))));
         } else if (type === 'decode') resolve(JSON.parse(decodeURIComponent(escape(atob(payload)))));
         else if (type === 'buildPlan') resolve(buildPlanSeqSync({
-          books, chronoRanges, planType: payload.planType, customPeriodSet: payload.customPeriodSet
+          books, chronoRanges, planType: payload.planType, customPeriodSet: payload.customPeriodSet, customBookSet: payload.customBookSet
         }));
         else reject(new Error('unknown'));
       } catch (e) { reject(e); }
@@ -643,6 +946,7 @@ function computeProgressDataSync() {
 
 function buildPlanSeqSync(payload) {
   const planType_ = payload.planType, customPeriodSet_ = payload.customPeriodSet || [];
+  const customBookSet_ = payload.customBookSet || customBookSet || [];
   const seq = [];
   const useChrono = (planType_ === 'chrono' || planType_ === 'custom');
   if (useChrono) {
@@ -658,6 +962,7 @@ function buildPlanSeqSync(payload) {
     else if (planType_ === 'nt') idxs = [...Array(27).keys()].map(i => i + 46);
     else if (planType_ === 'psalms') idxs = [22];
     else if (planType_ === 'gospels') idxs = [46, 47, 48, 49];
+    else if (planType_ === 'customBooks') idxs = customBookSet_.map(Number).filter(bi => bi >= 0 && bi < books.length).sort((a,b)=>a-b);
     else idxs = [...Array(books.length).keys()];
     for (const bi of idxs) {
       for (let c = 1; c <= books[bi][2]; c++) seq.push({ book: bi, chapter: c, period: 0 });
@@ -834,8 +1139,53 @@ function applyChartData(d){
   }
 }
 
+
+function planTypeLabel(t){
+  return ({all:'전체통독',ot:'구약',nt:'신약',chrono:'연대순',psalms:'시편',gospels:'복음서',custom:'시대 선택',customBooks:'개별 선택'})[t]||t||'전체통독';
+}
+function renderPlanItemProgress(){
+  const box=$('planItemProgress');
+  const label=$('planProgressLabel');
+  if(!box) return;
+  const total=totalChapters();
+  let done=0;
+  for(const it of planSeq){
+    if(chapterRead[verseKey(it.book,it.chapter)]) done++;
+  }
+  const pct=total?Math.round(done/total*100):0;
+  if(label) label.textContent=planTypeLabel(planType)+' · '+days+'일 계획 · 완료 '+done+' / '+total+' ('+pct+'%)';
+
+  // 책 단위로 묶은 항목별 진도
+  const byBook=new Map();
+  for(const it of planSeq){
+    if(!byBook.has(it.book)) byBook.set(it.book,{book:it.book,total:0,done:0});
+    const o=byBook.get(it.book);
+    o.total++;
+    if(chapterRead[verseKey(it.book,it.chapter)]) o.done++;
+  }
+  const rows=[...byBook.values()].sort((a,b)=>a.book-b.book);
+  if(!rows.length){
+    box.innerHTML='<p class="muted small">계획 분량이 없습니다. 통독 계획 탭에서 저장해 주세요.</p>';
+    return;
+  }
+  // 오늘 항목 상태
+  const today=getTodayItems();
+  const todayHtml=today.length
+    ? '<div style="margin-bottom:14px"><b class="small">오늘 분량</b>'+today.map(it=>
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><button type="button" class="alt" style="border:0;background:none;color:var(--navy);padding:0;cursor:pointer;text-align:left" onclick="openReading('+it.book+','+it.chapter+')">'+it.label+'</button><span class="small" style="color:'+(it.done?'#2e7d32':'#78818a')+'">'+(it.done?'완료':'미완료')+'</span></div>'
+      ).join('')+'</div>'
+    : '';
+
+  const bookHtml=rows.map(o=>{
+    const p=o.total?Math.round(o.done/o.total*100):0;
+    return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>'+safe(books[o.book][0])+'</span><span class="muted">'+o.done+' / '+o.total+unit(o.book)+' · '+p+'%</span></div><div class="progress"><span style="width:'+p+'%"></span></div></div>';
+  }).join('');
+  box.innerHTML=todayHtml+'<b class="small">계획 책별 진도</b>'+bookHtml;
+}
+
 function stats(){
   updateCharts();
+  renderPlanItemProgress();
   const doneKeys=Object.keys(chapterRead).filter(k=>chapterRead[k]);
   $('sDone').textContent=doneKeys.length;
   $('sPct').textContent=Math.round(doneKeys.length/Math.max(1,totalChapters())*100)+'%';
@@ -862,7 +1212,7 @@ function gatherBackup(){
   return {
     v:1,
     exportedAt:new Date().toISOString(),
-    days, start, planType, customPeriods:customPeriodSet,
+    days, start, planType, customPeriods:customPeriodSet, customBooks:customBookSet,
     chapterRead, verseRead, verseTotal, notes,
     hideNotes: localStorage.hideNotes||'0'
   };
@@ -902,9 +1252,11 @@ function applyBackup(data){
   if(data.start) start=data.start;
   if(data.planType) planType=data.planType;
   if(data.customPeriods) customPeriodSet=data.customPeriods;
+  if(data.customBooks) customBookSet=data.customBooks;
   if(data.hideNotes!=null) localStorage.hideNotes=data.hideNotes;
   localStorage.days=days; localStorage.start=start; localStorage.planType=planType;
   localStorage.customPeriods=JSON.stringify(customPeriodSet);
+  localStorage.customBooks=JSON.stringify(customBookSet);
   localStorage.notes=JSON.stringify(notes);
   saveVerseData();
   rebuildPlanSeq();
@@ -951,5 +1303,6 @@ if($('planType'))$('planType').value=planType;
 if([90,180,365,730].includes(days)){if($('days'))$('days').value=String(days)}
 else if($('days')){$('days').value='customDays';if($('customDays'))$('customDays').value=days;if($('customDaysWrap'))$('customDaysWrap').classList.remove('hidden')}
 if(planType==='custom'){if($('customPeriods'))$('customPeriods').classList.remove('hidden');renderPeriodChecks()}
+if(planType==='customBooks'){if($('customBooksPanel'))$('customBooksPanel').classList.remove('hidden');renderBookChecks()}
 selectBook(0);dashboard();preview();
 </script></body></html>

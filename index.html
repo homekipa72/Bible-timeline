@@ -128,17 +128,12 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <label style="display:block">범위/순서
 <select id="planType" onchange="onPlanTypeChange()" style="width:100%;max-width:320px">
 <option value="all">전체통독</option>
-<option value="ot">구약</option>
-<option value="nt">신약</option>
-<option value="chrono">연대순</option>
-<option value="psalms">시편</option>
-<option value="gospels">복음서</option>
-<option value="custom">시대 선택</option>
+<option value="custom">연대기별</option>
 <option value="customBooks">개별 선택</option>
 </select>
 </label>
 <div id="customPeriods" class="hidden" style="margin-top:12px">
-<p class="small muted">포함할 시대를 고르세요. (연대순 장 순서 유지)</p>
+<p class="small muted">포함할 시대를 고르세요. 연대기 순서로 읽습니다.</p>
 <div id="periodChecks" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
 </div>
 <div id="customBooksPanel" class="hidden" style="margin-top:12px">
@@ -146,8 +141,10 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
 <button type="button" class="alt" onclick="selectAllCustomBooks(true)">전체 선택</button>
 <button type="button" class="alt" onclick="selectAllCustomBooks(false)">전체 해제</button>
-<button type="button" class="alt" onclick="selectAllCustomBooks('ot')">구약만</button>
-<button type="button" class="alt" onclick="selectAllCustomBooks('nt')">신약만</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('ot')">구약</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('nt')">신약</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('gospels')">복음서</button>
+<button type="button" class="alt" onclick="selectAllCustomBooks('psalms')">시편</button>
 </div>
 <div id="bookChecks" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:10px;max-height:240px;overflow:auto;padding:4px"></div>
 </div>
@@ -202,22 +199,22 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 </div>
 
 <div class="card" id="chronoInfoCard">
-<p class="small muted">연대순·시대 선택은 12시대 흐름을 따릅니다. 창세기·열왕기 등은 장 단위로 시대가 나뉩니다.</p>
+<p class="small muted">연대기별은 아래 12시대 핵심 본문을 따릅니다. 창세기·열왕기 등은 장 단위로 시대가 나뉩니다.</p>
 <details id="chronoBookList" style="margin-top:8px">
-<summary style="cursor:pointer;font-weight:600;color:var(--navy)">연대순에 포함된 성경 목록 (12시대)</summary>
+<summary style="cursor:pointer;font-weight:600;color:var(--navy)">연대기별 성경 목록 (12시대)</summary>
 <div class="small" style="margin-top:10px;line-height:1.55">
-<p><b style="color:#0d9488">1. 초기 세계</b> — 창세기 1–11장</p>
-<p><b style="color:#6b21a8">2. 성조 시대</b> — 창세기 12–50장, 욥기</p>
-<p><b style="color:#dc2626">3. 이집트와 탈출</b> — 탈출기, 레위기</p>
-<p><b style="color:#a16207">4. 광야 생활</b> — 민수기, 신명기</p>
-<p><b style="color:#16a34a">5. 정복과 판관 시대</b> — 여호수아기, 판관기, 룻기</p>
-<p><b style="color:#7c3aed">6. 왕국 시대</b> — 사무엘기 상·하권, 열왕기 상권 1–11장, 역대기 상권, 시편, 잠언, 코헬렛, 아가</p>
-<p><b style="color:#1f2937">7. 분열 왕국</b> — 열왕기 상권 12장 이후, 열왕기 하권 1–16장, 역대기 하권, 아모스서, 호세아서, 요나서, 미카서, 이사야서, 나훔서, 스바니야서, 하바쿡서</p>
-<p><b style="color:#0ea5e9">8. 유배 시대</b> — 열왕기 하권 17–25장, 예레미야서, 애가, 바룩서, 에제키엘서, 다니엘서, 토빗기, 오바드야서</p>
-<p><b style="color:#eab308">9. 귀환 시대</b> — 에즈라기, 느헤미야기, 에스테르기, 유딧기, 하까이서, 즈카르야서, 말라키서, 요엘서</p>
-<p><b style="color:#ea580c">10. 마카베오 항쟁</b> — 마카베오기 상·하권, 집회서, 지혜서</p>
-<p><b style="color:#ca8a04">11. 메시아의 성취</b> — 루카 복음서, 마태오 복음서, 마르코 복음서, 요한 복음서</p>
-<p><b style="color:#64748b">12. 교회 시대</b> — 사도행전, 야고보 서간, 갈라티아·테살로니카·코린토·로마·에페소·필리피·콜로새 서간, 티모테오·티토·필레몬 서간, 히브리인들에게 보낸 서간, 베드로·요한·유다 서간, 요한 묵시록</p>
+<p><b style="color:#0d9488">1. 초기 세계</b> (창조와 인류의 시작) — 창세기 1–11장</p>
+<p><b style="color:#6b21a8">2. 성조 시대</b> (아브라함과 계약) — 창세기 12–50장</p>
+<p><b style="color:#dc2626">3. 이집트와 탈출</b> (해방과 구원) — 탈출기</p>
+<p><b style="color:#a16207">4. 광야 생활</b> (약속의 땅을 향한 여정) — 민수기</p>
+<p><b style="color:#16a34a">5. 정복과 판관 시대</b> (약속의 땅 정착) — 여호수아기 · 판관기</p>
+<p><b style="color:#7c3aed">6. 왕국 시대</b> (이스라엘 왕국의 전성기) — 사무엘기 · 열왕기 상권 1–11장</p>
+<p><b style="color:#1f2937">7. 분열 왕국</b> (왕국의 분열과 쇠퇴) — 열왕기 상권 12장 – 열왕기 하권 16장</p>
+<p><b style="color:#0ea5e9">8. 유배 시대</b> (바빌론 유배와 상실) — 열왕기 하권 17–25장</p>
+<p><b style="color:#eab308">9. 귀환 시대</b> (고향으로 돌아오다) — 에즈라기 · 느헤미야기</p>
+<p><b style="color:#ea580c">10. 마카베오 항쟁</b> (신앙과 율법을 지키기 위한 투쟁) — 마카베오기 상·하권</p>
+<p><b style="color:#ca8a04">11. 메시아의 성취</b> (예수 그리스도 안에서 이루어진 구원) — 루카 복음서</p>
+<p><b style="color:#64748b">12. 교회 시대</b> (성령과 교회의 탄생) — 사도행전</p>
 </div>
 </details>
 </div>
@@ -304,42 +301,30 @@ const periods = [
 // 장 단위 연대순: [bookIndex, fromChapter, toChapter, periodId]
 // toChapter inclusive. books[bi][2] is total chapters.
 const chronoRanges = [
-  // 1. 초기 세계
+  // 1. 초기 세계 — 창세기 1–11장
   [0,1,11,1],
-  // 2. 성조 시대 (창 12–50 + 욥기)
-  [0,12,50,2], [21,1,42,2],
-  // 3. 이집트와 탈출 (탈출기 + 레위기: 시나이 율법)
-  [1,1,40,3], [2,1,27,3],
-  // 4. 광야 생활
-  [3,1,36,4], [4,1,34,4],
-  // 5. 정복과 판관
-  [5,1,24,5], [6,1,21,5], [7,1,4,5],
-  // 6. 왕국 시대 (삼상·삼하, 왕상 1–11, 대상, 시편·잠언·코헬렛·아가)
-  [8,1,31,6], [9,1,24,6], [10,1,11,6], [12,1,29,6],
-  [22,1,150,6], [23,1,31,6], [24,1,12,6], [25,1,8,6],
-  // 7. 분열 왕국 (왕상 12–22, 왕하 1–16, 대하, 주요 예언)
-  [10,12,22,7], [11,1,16,7], [13,1,36,7],
-  [36,1,9,7], [34,1,14,7], [38,1,4,7], [39,1,7,7], [28,1,66,7],
-  [40,1,3,7], [42,1,3,7], [41,1,3,7],
-  // 8. 유배 시대 (왕하 17–25 + 예레미야·애가·바룩·에제키엘·다니엘·토빗 등)
-  [11,17,25,8], [29,1,52,8], [30,1,5,8], [31,1,6,8],
-  [32,1,48,8], [33,1,14,8], [16,1,14,8], [37,1,1,8],
-  // 9. 귀환 시대
-  [14,1,10,9], [15,1,13,9], [18,1,10,9], [17,1,16,9],
-  [43,1,2,9], [44,1,14,9], [45,1,3,9], [35,1,4,9],
-  // 10. 마카베오 항쟁 + 중간기 지혜
-  [19,1,16,10], [20,1,15,10], [27,1,51,10], [26,1,19,10],
-  // 11. 메시아의 성취 (복음서 — 사용자 지정 루카를 중심에 두되 4복음 포함)
-  [48,1,24,11], [46,1,28,11], [47,1,16,11], [49,1,21,11],
-  // 12. 교회 시대
-  [50,1,28,12],
-  [65,1,5,12], [54,1,6,12], [58,1,5,12], [59,1,3,12],
-  [52,1,16,12], [53,1,13,12], [51,1,16,12],
-  [55,1,6,12], [56,1,4,12], [57,1,4,12],
-  [60,1,6,12], [61,1,4,12], [62,1,3,12], [63,1,1,12],
-  [64,1,13,12], [66,1,5,12], [67,1,3,12],
-  [68,1,5,12], [69,1,1,12], [70,1,1,12], [71,1,1,12],
-  [72,1,22,12]
+  // 2. 성조 시대 — 창세기 12–50장
+  [0,12,50,2],
+  // 3. 이집트와 탈출 — 탈출기
+  [1,1,40,3],
+  // 4. 광야 생활 — 민수기
+  [3,1,36,4],
+  // 5. 정복과 판관 시대 — 여호수아기 · 판관기
+  [5,1,24,5], [6,1,21,5],
+  // 6. 왕국 시대 — 사무엘기 · 열왕기 상권 1–11장
+  [8,1,31,6], [9,1,24,6], [10,1,11,6],
+  // 7. 분열 왕국 — 열왕기 상권 12장 – 열왕기 하권 16장
+  [10,12,22,7], [11,1,16,7],
+  // 8. 유배 시대 — 열왕기 하권 17–25장
+  [11,17,25,8],
+  // 9. 귀환 시대 — 에즈라기 · 느헤미야기
+  [14,1,10,9], [15,1,13,9],
+  // 10. 마카베오 항쟁 — 마카베오기 상·하권
+  [19,1,16,10], [20,1,15,10],
+  // 11. 메시아의 성취 — 루카 복음서
+  [48,1,24,11],
+  // 12. 교회 시대 — 사도행전
+  [50,1,28,12]
 ];
 
 let planType=localStorage.planType||'all';
@@ -452,17 +437,17 @@ function todayItemsForPlan(p){
 // 시대별 포함 성경 안내 (표시용)
 const periodBookLabels={
   1:'창세기 1–11장',
-  2:'창세기 12–50장, 욥기',
-  3:'탈출기, 레위기',
-  4:'민수기, 신명기',
-  5:'여호수아기, 판관기, 룻기',
-  6:'사무엘 상·하, 열왕기 상 1–11장, 역대기 상, 시편, 잠언, 코헬렛, 아가',
-  7:'열왕기 상 12장–, 열왕기 하 1–16장, 역대기 하, 아모스·호세아·요나·미카·이사야·나훔·스바니야·하바쿡',
-  8:'열왕기 하 17–25장, 예레미야·애가·바룩·에제키엘·다니엘, 토빗, 오바드야',
-  9:'에즈라·느헤미야·에스테르·유딧, 하까이·즈카르야·말라키·요엘',
-  10:'마카베오 상·하, 집회서, 지혜서',
-  11:'루카·마태오·마르코·요한 복음서',
-  12:'사도행전, 서간들, 요한 묵시록'
+  2:'창세기 12–50장',
+  3:'탈출기',
+  4:'민수기',
+  5:'여호수아기 · 판관기',
+  6:'사무엘기 · 열왕기 상권 1–11장',
+  7:'열왕기 상권 12장 – 열왕기 하권 16장',
+  8:'열왕기 하권 17–25장',
+  9:'에즈라기 · 느헤미야기',
+  10:'마카베오기 상·하권',
+  11:'루카 복음서',
+  12:'사도행전'
 };
 
 let planSeq=[]; // [{book,chapter,period}, ...]
@@ -827,7 +812,7 @@ function onPlanTypeChange(){
   planType=$('planType').value;
   if($('customPeriods')) $('customPeriods').classList.toggle('hidden', planType!=='custom');
   if($('customBooksPanel')) $('customBooksPanel').classList.toggle('hidden', planType!=='customBooks');
-  if($('chronoInfoCard')) $('chronoInfoCard').classList.toggle('hidden', !(planType==='chrono'||planType==='custom'));
+  if($('chronoInfoCard')) $('chronoInfoCard').classList.toggle('hidden', planType!=='custom');
   if(planType==='custom') renderPeriodChecks();
   if(planType==='customBooks') renderBookChecks();
   rebuildPlanSeq();
@@ -845,7 +830,7 @@ function renderPeriodChecks(){
   if(!$('periodChecks')) return;
   $('periodChecks').innerHTML=periods.map(p=>{
     const on=customPeriodSet.includes(p.id);
-    const booksLabel=periodBookLabels[p.id]||'';
+    const booksLabel=(p.desc?p.desc+' · ':'')+(periodBookLabels[p.id]||'');
     return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)"><input type="checkbox" style="margin-top:3px" data-pid="'+p.id+'" '+(on?'checked':'')+' onchange="toggleCustomPeriod('+p.id+',this.checked)"><span style="flex:1"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+p.color+';border:'+(p.id===12?'1px solid #cbd5e1':'none')+';flex-shrink:0"></span><b>'+p.name+'</b></span><span class="small muted" style="display:block;margin-top:4px;line-height:1.45">'+booksLabel+'</span></span></label>';
   }).join('');
 }
@@ -880,6 +865,8 @@ function selectAllCustomBooks(mode){
   else if(mode===false) customBookSet=[];
   else if(mode==='ot') customBookSet=[...Array(46).keys()];
   else if(mode==='nt') customBookSet=[...Array(27).keys()].map(i=>i+46);
+  else if(mode==='gospels') customBookSet=[46,47,48,49];
+  else if(mode==='psalms') customBookSet=[22];
   renderBookChecks();
   rebuildPlanSeq();
   renderRangePreview();
@@ -1533,7 +1520,7 @@ function applyChartData(d){
 
 
 function planTypeLabel(t){
-  return ({all:'전체통독',ot:'구약',nt:'신약',chrono:'연대순',psalms:'시편',gospels:'복음서',custom:'시대 선택',customBooks:'개별 선택'})[t]||t||'전체통독';
+  return ({all:'전체통독',ot:'구약',nt:'신약',chrono:'연대기별',psalms:'시편',gospels:'복음서',custom:'연대기별',customBooks:'개별 선택'})[t]||t||'전체통독';
 }
 function renderPlanItemProgress(){
   const box=$('planItemProgress');

@@ -96,7 +96,7 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <div class="card" id="readPlanBar">
 <div id="readPlanMeta" class="small muted">통독 계획을 선택하면 진도 미리보기가 표시됩니다.</div>
 <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px">
-<button type="button" id="btnResumeRead" onclick="resumeLastRead()">이어서 읽기</button>
+<button type="button" id="btnResumeRead" onclick="resumeLastRead()">이어 읽기</button>
 <button type="button" class="alt" id="btnTodayRead" onclick="openTodayPortion()">오늘 분량 읽기</button>
 </div>
 <div id="readPlanPreview" style="margin-top:12px"></div>
@@ -629,20 +629,32 @@ function renderHomePlans(){
     el.innerHTML='<div class="card"><p class="muted">진행 중인 통독 계획이 없습니다.</p><p class="small muted">통독 계획 탭에서 범위·기간·시작일을 정한 뒤 저장해 주세요. (최대 5개)</p><button type="button" onclick="view(\'plan\')">통독 계획 만들기</button></div>';
     return;
   }
-  el.innerHTML=savedPlans.map(p=>{
+  el.innerHTML=savedPlans.map((p, idx)=>{
     const pr=planProgress(p);
-    const periodText=(p.start||'')+(pr.endStr?' ~ '+pr.endStr:'')+' · '+p.days+'일';
+    const day=dayIndexForPlan(p);
+    const periodText=(p.start||'')+(pr.endStr?' ~ '+pr.endStr:'')+' · '+p.days+'일'+(p.skipSundays?' (주일 제외)':'');
     const active= (getActivePlan()&&getActivePlan().id===p.id);
+    const dayLabel='제 '+day+'일차 / '+p.days+'일';
     return '<div class="card" style="border-color:'+(active?'var(--gold)':'var(--line)')+'">'+
       '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">'+
-        '<div><div class="eyebrow">READING PLAN</div><h2 style="margin:4px 0 8px;font:22px Georgia;color:var(--navy)">'+safe(p.name)+'</h2>'+
-        '<div class="small muted">기한 '+safe(periodText)+'</div>'+
-        '<div class="small" style="margin-top:4px">상태 · <b>'+safe(pr.status)+'</b></div></div>'+
-        '<div style="text-align:right"><div class="metric" style="font-size:26px">'+pr.pct+'%</div><div class="small muted">'+pr.done+'/'+pr.total+'</div></div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="eyebrow">READING PLAN</div>'+
+          '<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin:4px 0 8px">'+
+            '<h2 style="margin:0;font:22px Georgia;color:var(--navy)">'+safe(p.name)+'</h2>'+
+            '<span class="small" style="color:var(--gold);font-weight:600">'+dayLabel+'</span>'+
+          '</div>'+
+          '<div class="small muted">기한 '+safe(periodText)+'</div>'+
+          '<div class="small" style="margin-top:4px">상태 · <b>'+safe(pr.status)+'</b></div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div class="metric" style="font-size:26px">'+pr.pct+'%</div>'+
+          '<div class="small muted">'+pr.done+'/'+pr.total+'</div>'+
+          '<button type="button" class="alt" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="deleteSavedPlan('+idx+')">삭제</button>'+
+        '</div>'+
       '</div>'+
       '<div class="progress" style="margin-top:12px"><span style="width:'+pr.pct+'%"></span></div>'+
       '<div class="row" style="margin-top:14px;flex-wrap:wrap;gap:8px">'+
-        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'last\')">성경 읽기</button>'+
+        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'last\')">이어 읽기</button>'+
         '<button type="button" class="alt" onclick="openPlanReading(\''+p.id+'\',\'today\')">오늘 분량 읽기</button>'+
         '<button type="button" class="alt" onclick="completePlanToday(\''+p.id+'\')">오늘 분량 완료</button>'+
       '</div></div>';
@@ -658,18 +670,39 @@ function openPlanReading(planId, mode){
   const p=savedPlans.find(x=>x.id===planId);
   if(!p){ view('read'); return; }
   if(mode==='today'){
+    if(p.skipSundays){
+      const t=new Date(); t.setHours(0,0,0,0);
+      if(t.getDay()===0){
+        alert('오늘은 주일입니다. 이 계획은 주일에 분량을 배정하지 않습니다.');
+        // 그래도 읽기 화면은 열되, 마지막 위치로
+        const lr=lastReadByPlan[planId];
+        if(lr){ selectBook(lr.book); selectChapter(lr.chapter); }
+        view('read');
+        renderReadPlanPreview();
+        return;
+      }
+    }
     const items=todayItemsForPlan(p);
     if(items.length){
       selectBook(items[0].book);
       selectChapter(items[0].chapter);
     } else {
+      alert('오늘 배정된 분량이 없습니다.');
       const lr=lastReadByPlan[planId];
       if(lr){ selectBook(lr.book); selectChapter(lr.chapter); }
+      else {
+        const seq=buildSeqForPlan(p);
+        if(seq.length){ selectBook(seq[0].book); selectChapter(seq[0].chapter); }
+      }
     }
   } else {
+    // 이어 읽기: 마지막 읽은 지점
     const lr=lastReadByPlan[planId];
-    if(lr){ selectBook(lr.book); selectChapter(lr.chapter); }
-    else {
+    if(lr){
+      selectBook(lr.book);
+      selectChapter(lr.chapter);
+    } else {
+      // 기록이 없으면 오늘 분량 → 없으면 계획 첫 장
       const items=todayItemsForPlan(p);
       if(items.length){ selectBook(items[0].book); selectChapter(items[0].chapter); }
       else {

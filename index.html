@@ -85,7 +85,7 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <main>
 <section id="home"><div class="eyebrow">DAILY SCRIPTURE JOURNEY</div><div class="h1">오늘의 통독</div>
 <p class="muted" id="today"></p>
-<p class="muted" id="homeHint">진행 중인 통독 계획입니다. 최대 2개까지 저장할 수 있습니다.</p>
+<p class="muted" id="homeHint">진행 중인 통독 계획입니다. 최대 5개까지 저장할 수 있습니다.</p>
 <div id="homePlanList" style="display:flex;flex-direction:column;gap:14px;margin-top:12px"></div>
 <div class="card" style="margin-top:8px">
 <p class="small muted">본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a> · 공식 본문을 장별로 저장해 오프라인에서도 읽을 수 있습니다.</p>
@@ -121,7 +121,7 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <section id="plan" class="hidden"><div class="eyebrow">READING PLAN</div><div class="h1">나만의 통독 계획</div>
 
 <div class="card">
-<p class="muted">① 통독 범위 → ② 기간 → ③ 시작일 → ④ 계획 저장 순서로 설정합니다. 계획은 최대 2개까지 저장할 수 있습니다.</p>
+<p class="muted">① 통독 범위 → ② 기간 → ③ 시작일 → ④ 계획 저장 순서로 설정합니다. 계획은 최대 5개까지 저장할 수 있습니다.</p>
 
 <div style="margin-top:14px">
 <div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">1. 통독 범위</div>
@@ -148,11 +148,11 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 </div>
 <div id="bookChecks" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:10px;max-height:240px;overflow:auto;padding:4px"></div>
 </div>
-<div id="rangePreview" class="small" style="margin-top:12px;padding:12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)"></div>
+<div id="rangePreview" class="small hidden" style="margin-top:12px;padding:12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)"></div>
 </div>
 
 <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
-<div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">2. 기간 (자동 배분)</div>
+<div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">2. 기간 설정 (자동배분 및 개인설정 가능)</div>
 <div class="row" style="flex-wrap:wrap;gap:10px">
 <label>방식
 <select id="autoMode" onchange="onAutoModeChange()">
@@ -166,11 +166,11 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 <label id="autoEndWrap" class="hidden">종료일 <input type="date" id="autoEnd" onchange="syncPeriodFromAuto()"></label>
 </div>
 <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px">
-<button type="button" class="alt" onclick="autoPlanPreset('90')">90일</button>
-<button type="button" class="alt" onclick="autoPlanPreset('180')">180일</button>
+<button type="button" class="alt" onclick="autoPlanPreset('40')">40일</button>
+<button type="button" class="alt" onclick="autoPlanPreset('100')">100일</button>
 <button type="button" class="alt" onclick="autoPlanPreset('365')">1년</button>
+<button type="button" class="alt" onclick="autoPlanPreset('yearNoSun')">1년(주일 제외)</button>
 <button type="button" class="alt" onclick="autoPlanPreset('730')">2년</button>
-<button type="button" class="alt" onclick="autoPlanPreset('per:1')">하루 1장</button>
 <button type="button" class="alt" onclick="autoPlanPreset('per:3')">하루 3장</button>
 <button type="button" class="alt" onclick="autoPlanPreset('per:5')">하루 5장</button>
 </div>
@@ -180,11 +180,11 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 
 <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
 <div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">3. 시작일</div>
-<label>시작일 <input type="date" id="start" onchange="preview()"></label>
+<label>시작일 <input type="date" id="start" onchange="syncPeriodFromAuto();preview()"></label>
 </div>
 
 <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
-<div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">4. 미리보기 · 저장</div>
+<div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">4. 미리보기 · 저장 (오늘의 통독 카드 미리보기)</div>
 <div id="preview" style="margin-top:8px"></div>
 <div id="autoPlanResult" class="small" style="margin-top:8px"></div>
 <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
@@ -194,7 +194,7 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 </div>
 
 <div class="card" style="margin-top:16px">
-<h3>저장된 통독 계획 <span class="small muted" id="planCountLabel">(0/2)</span></h3>
+<h3>저장된 통독 계획 <span class="small muted" id="planCountLabel">(0/5)</span></h3>
 <div id="savedPlansList"></div>
 </div>
 
@@ -331,7 +331,7 @@ let planType=localStorage.planType||'all';
 let customPeriodSet=JSON.parse(localStorage.customPeriods||'[1,2,3,4,5,6,7,8,9,10,11,12]');
 let customBookSet=JSON.parse(localStorage.customBooks||'null');
 if(!Array.isArray(customBookSet)) customBookSet=[...Array(books.length).keys()];
-// 저장된 통독 계획 (최대 2개)
+// 저장된 통독 계획 (최대 5개)
 let savedPlans=[];
 try{ savedPlans=JSON.parse(localStorage.savedPlans||'[]'); if(!Array.isArray(savedPlans)) savedPlans=[]; }catch(e){ savedPlans=[]; }
 // 구버전 단일 계획 마이그레이션
@@ -348,7 +348,8 @@ if(!savedPlans.length && localStorage.planType && localStorage.start){
   if(!Array.isArray(savedPlans[0].customBookSet)) savedPlans[0].customBookSet=[...Array(books.length).keys()];
   localStorage.savedPlans=JSON.stringify(savedPlans);
 }
-if(savedPlans.length>2){ savedPlans=savedPlans.slice(0,2); localStorage.savedPlans=JSON.stringify(savedPlans); }
+if(savedPlans.length>5){ savedPlans=savedPlans.slice(0,5); localStorage.savedPlans=JSON.stringify(savedPlans); }
+let planSkipSundays=false; // 기간 설정: 주일 제외 배분
 function persistPlans(){ localStorage.savedPlans=JSON.stringify(savedPlans); }
 let activePlanId=localStorage.activePlanId||'';
 let lastReadByPlan={};
@@ -377,7 +378,8 @@ function planProgress(p){
   const pct=seq.length?Math.round(done/seq.length*100):0;
   const day=dayIndexForPlan(p);
   const start=new Date((p.start||'')+'T00:00:00');
-  const end=new Date(start); end.setDate(end.getDate()+(p.days||1)-1);
+  const spanDays=p.skipSundays ? (p.calendarDays||365) : (p.days||1);
+  const end=new Date(start); end.setDate(end.getDate()+spanDays-1);
   const endStr=isNaN(end.getTime())?'':end.toISOString().slice(0,10);
   const today=new Date(); today.setHours(0,0,0,0);
   let status='진행 중';
@@ -408,9 +410,40 @@ function chaptersInSavedPlans(){
   }
   return set;
 }
+function countNonSundays(startStr, calendarDays){
+  let count=0;
+  const d=new Date(startStr+'T00:00:00');
+  if(isNaN(d.getTime())) return Math.max(1, calendarDays - Math.floor(calendarDays/7));
+  for(let i=0;i<calendarDays;i++){
+    if(d.getDay()!==0) count++;
+    d.setDate(d.getDate()+1);
+  }
+  return Math.max(1, count);
+}
+/** 시작일~기준일(포함) 사이 주일을 제외한 읽기 일수 */
+function countReadingDaysElapsed(startStr, untilDate, skipSundays){
+  const s=new Date(startStr+'T00:00:00');
+  const t=new Date(untilDate); t.setHours(0,0,0,0);
+  if(isNaN(s.getTime()) || t<s) return 0;
+  let count=0;
+  const cur=new Date(s);
+  while(cur<=t){
+    if(!skipSundays || cur.getDay()!==0) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
 function dayIndexForPlan(p){
   const t=new Date(); t.setHours(0,0,0,0);
-  const s=new Date((p.start||start)+'T00:00:00');
+  const startStr=p.start||start;
+  const skip=!!p.skipSundays;
+  if(skip){
+    let d=countReadingDaysElapsed(startStr, t, true);
+    if(d<1) d=1;
+    if(d>p.days) d=p.days;
+    return d;
+  }
+  const s=new Date(startStr+'T00:00:00');
   let d=Math.floor((t-s)/86400000)+1;
   if(d<1) d=1;
   if(d>p.days) d=p.days;
@@ -420,6 +453,11 @@ function todayItemsForPlan(p){
   const seq=buildSeqForPlan(p);
   const total=seq.length;
   if(!total||!p.days) return [];
+  // 주일 제외 계획: 일요일에는 배정 없음
+  if(p.skipSundays){
+    const t=new Date(); t.setHours(0,0,0,0);
+    if(t.getDay()===0) return [];
+  }
   const day=dayIndexForPlan(p);
   const a=Math.floor((day-1)*total/p.days);
   const z=Math.max(a+1, Math.floor(day*total/p.days));
@@ -588,7 +626,7 @@ function renderHomePlans(){
   const el=$('homePlanList');
   if(!el) return;
   if(!savedPlans.length){
-    el.innerHTML='<div class="card"><p class="muted">진행 중인 통독 계획이 없습니다.</p><p class="small muted">통독 계획 탭에서 범위·기간·시작일을 정한 뒤 저장해 주세요. (최대 2개)</p><button type="button" onclick="view(\'plan\')">통독 계획 만들기</button></div>';
+    el.innerHTML='<div class="card"><p class="muted">진행 중인 통독 계획이 없습니다.</p><p class="small muted">통독 계획 탭에서 범위·기간·시작일을 정한 뒤 저장해 주세요. (최대 5개)</p><button type="button" onclick="view(\'plan\')">통독 계획 만들기</button></div>';
     return;
   }
   el.innerHTML=savedPlans.map(p=>{
@@ -736,13 +774,19 @@ function onDaysChange(){const c=$('days').value==='customDays';$('customDaysWrap
 function renderRangePreview(){
   const el=$('rangePreview');
   if(!el) return;
+  // 개별 선택에서만 범위 미리보기 표시
+  if(planType!=='customBooks'){
+    el.classList.add('hidden');
+    el.innerHTML='';
+    return;
+  }
+  el.classList.remove('hidden');
   rebuildPlanSeq();
   const total=totalChapters();
   if(!total){
-    el.innerHTML='<span style="color:#b91c1c">이 범위에 분량이 없습니다. 시대/책을 선택해 주세요.</span>';
+    el.innerHTML='<span style="color:#b91c1c">이 범위에 분량이 없습니다. 책을 선택해 주세요.</span>';
     return;
   }
-  // 책 목록 요약
   const bookMap=new Map();
   for(const it of planSeq){
     if(!bookMap.has(it.book)) bookMap.set(it.book,0);
@@ -750,12 +794,54 @@ function renderRangePreview(){
   }
   const booksHtml=[...bookMap.entries()].map(([bi,n])=>safe(books[bi][0])+' <span class="muted">('+n+unit(bi)+')</span>').join(' · ');
   const first=planSeq[0], last=planSeq[planSeq.length-1];
-  el.innerHTML='<b>'+planTypeLabel(planType)+'</b> · 총 <b>'+total+'</b>개 분량<br><span class="muted">'+chLabel(first.book,first.chapter)+' → '+chLabel(last.book,last.chapter)+'</span><div style="margin-top:8px;line-height:1.5">'+booksHtml+'</div>';
+  el.innerHTML='<b>개별 선택 미리보기</b> · 총 <b>'+total+'</b>개 분량<br><span class="muted">'+chLabel(first.book,first.chapter)+' → '+chLabel(last.book,last.chapter)+'</span><div style="margin-top:8px;line-height:1.5">'+booksHtml+'</div>';
 }
+
+function renderPlanCardPreview(){
+  const box=$('preview');
+  if(!box) return;
+  rebuildPlanSeq();
+  const total=totalChapters();
+  const nDays=effectiveDays();
+  const startStr=($('start')&&$('start').value)||start||new Date().toISOString().slice(0,10);
+  const name=planTypeLabel(planType);
+  const perAvg=total?Math.round(total/nDays*10)/10:0;
+  let endStr='';
+  try{
+    const s=new Date(startStr+'T00:00:00');
+    const e=new Date(s); e.setDate(e.getDate()+(planSkipSundays?365:nDays)-1);
+    endStr=e.toISOString().slice(0,10);
+  }catch(err){}
+  const periodText=startStr+(endStr?' ~ '+endStr:'')+' · '+nDays+'일'+(planSkipSundays?' (주일 제외)':'');
+  const status='시작 가능';
+  // 오늘의 통독 홈 카드와 동일한 레이아웃
+  box.innerHTML=
+    '<p class="small muted" style="margin-bottom:8px">저장 후 오늘의 통독에 표시될 카드 미리보기</p>'+
+    '<div class="card" style="margin:0;border-color:var(--gold)">'+
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">'+
+        '<div><div class="eyebrow">READING PLAN</div><h2 style="margin:4px 0 8px;font:22px Georgia;color:var(--navy)">'+safe(name)+'</h2>'+
+        '<div class="small muted">기한 '+safe(periodText)+'</div>'+
+        '<div class="small" style="margin-top:4px">상태 · <b>'+status+'</b></div></div>'+
+        '<div style="text-align:right"><div class="metric" style="font-size:26px">0%</div><div class="small muted">0/'+total+'</div></div>'+
+      '</div>'+
+      '<div class="progress" style="margin-top:12px"><span style="width:0%"></span></div>'+
+      '<div class="row" style="margin-top:14px;flex-wrap:wrap;gap:8px">'+
+        '<button type="button" disabled>성경 읽기</button>'+
+        '<button type="button" class="alt" disabled>오늘 분량 읽기</button>'+
+        '<button type="button" class="alt" disabled>오늘 분량 완료</button>'+
+      '</div></div>';
+}
+
 function syncPeriodFromAuto(){
   const mode=($('autoMode')&&$('autoMode').value)||'days';
   rebuildPlanSeq();
   const total=totalChapters();
+  // 주일 제외 1년: 시작일 기준으로 읽기일 수 재계산
+  if(planSkipSundays && mode==='days'){
+    const startStr=($('start')&&$('start').value)||start||new Date().toISOString().slice(0,10);
+    const n=countNonSundays(startStr, 365);
+    if($('autoDays')) $('autoDays').value=n;
+  }
   let nDays;
   if(mode==='perDay'){
     const per=Math.max(1, Math.min(50, +($('autoPerDay')&&$('autoPerDay').value)||3));
@@ -775,14 +861,16 @@ function syncPeriodFromAuto(){
   setPlanDaysUI(nDays);
   if($('autoPlanResult')){
     const perAvg=total?Math.round(total/nDays*10)/10:0;
-    $('autoPlanResult').innerHTML='<span class="muted">배분: 총 '+total+'분량 · '+nDays+'일 · 하루 평균 '+perAvg+'장</span>';
+    let extra=planSkipSundays?' · 주일 제외 (약 1년 달력, 읽기일 '+nDays+'일)':'';
+    $('autoPlanResult').innerHTML='<span class="muted">배분: 총 '+total+'분량 · '+nDays+'일 · 하루 평균 '+perAvg+'장'+extra+'</span>';
   }
+  renderPlanCardPreview();
   preview();
 }
 function renderSavedPlans(){
   const el=$('savedPlansList');
   const lab=$('planCountLabel');
-  if(lab) lab.textContent='('+savedPlans.length+'/2)';
+  if(lab) lab.textContent='('+savedPlans.length+'/5)';
   if(!el) return;
   if(!savedPlans.length){
     el.innerHTML='<p class="muted small">아직 저장된 계획이 없습니다.</p>';
@@ -818,7 +906,6 @@ function onPlanTypeChange(){
   rebuildPlanSeq();
   renderRangePreview();
   syncPeriodFromAuto();
-  preview();
 }
 async function rebuildPlanSeqAsync(){
   if (!_workerMetaReady) await initWorkerMeta();
@@ -841,7 +928,6 @@ function toggleCustomPeriod(pid, on){
   rebuildPlanSeq();
   renderRangePreview();
   syncPeriodFromAuto();
-  preview();
 }
 function renderBookChecks(){
   if(!$('bookChecks')) return;
@@ -858,7 +944,6 @@ function toggleCustomBook(bi, on){
   rebuildPlanSeq();
   renderRangePreview();
   syncPeriodFromAuto();
-  preview();
 }
 function selectAllCustomBooks(mode){
   if(mode===true) customBookSet=[...Array(books.length).keys()];
@@ -871,7 +956,6 @@ function selectAllCustomBooks(mode){
   rebuildPlanSeq();
   renderRangePreview();
   syncPeriodFromAuto();
-  preview();
 }
 function effectiveDays(){
   // 통합 흐름: autoDays / 숨은 days 셀렉트 동기화값 사용
@@ -887,6 +971,17 @@ function onAutoModeChange(){
   $('autoEndWrap').classList.toggle('hidden', m!=='endDate');
 }
 function autoPlanPreset(kind){
+  if(String(kind)==='yearNoSun'){
+    planSkipSundays=true;
+    if($('autoMode')) $('autoMode').value='days';
+    const startStr=($('start')&&$('start').value)||start||new Date().toISOString().slice(0,10);
+    const n=countNonSundays(startStr, 365);
+    if($('autoDays')) $('autoDays').value=n;
+    onAutoModeChange();
+    syncPeriodFromAuto();
+    return;
+  }
+  planSkipSundays=false;
   if(String(kind).startsWith('per:')){
     if($('autoMode')) $('autoMode').value='perDay';
     if($('autoPerDay')) $('autoPerDay').value=String(kind).slice(4);
@@ -942,8 +1037,8 @@ function savePlan(){
     alert('선택한 범위에 분량이 없습니다. 시대 또는 책을 선택해 주세요.');
     return;
   }
-  if(savedPlans.length>=2){
-    alert('통독 계획은 최대 2개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
+  if(savedPlans.length>=5){
+    alert('통독 계획은 최대 5개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
     renderSavedPlans();
     return;
   }
@@ -954,6 +1049,8 @@ function savePlan(){
     planType,
     days,
     start,
+    skipSundays:!!planSkipSundays,
+    calendarDays: planSkipSundays ? 365 : null,
     customPeriodSet:customPeriodSet.slice(),
     customBookSet:customBookSet.slice()
   };
@@ -967,7 +1064,7 @@ function savePlan(){
   dashboard();
   renderHomePlans();
   preview();
-  alert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/2)');
+  alert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/5)');
 }
 function completeToday(){
   const p=getActivePlan()||savedPlans[0];

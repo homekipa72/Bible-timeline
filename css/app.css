@@ -1,7 +1,7 @@
 :root{
   --navy:#172b43;--gold:#b99a61;--ink:#283342;--line:#e9e4d9;
   --bg:#f7f4ed;--surface:#fffefa;--card:#ffffff;--muted:#78818a;
-  --paper:#ffffff;--alt-btn:#eee9df;--progress-bg:#eee9df;
+  --paper:#ffffff;--alt-btn:#eee9df;--progress-bg:#eee9df;--soft:#faf8f3;--soft-2:#f5f2eb;--ok-bg:#e8f5e9;--ok-border:#a5d6a7;--ok-text:#2e7d32;--today-bg:#fff8e7;
   --focus:#b99a61;--aside-text:#d5dbe1;--brand:#e6d3a7;--brand-sub:#c8d0d8;
   --danger:#9f3434;--notice-bg:#f8f2e5;--read-bg:#edf4ee;--sel-bg:#fff3d6;
 }
@@ -38,22 +38,22 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 .small{font-size:12px;line-height:1.7;color:var(--muted)}.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
 .toolbar label{font-size:13px}.toolbar select{padding:8px}
 .bookgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:260px;overflow:auto}
-.bookgrid button{background:#f5f2eb;color:#283342;text-align:left;font-size:12px}
+.bookgrid button{background:var(--soft-2);color:var(--ink);text-align:left;font-size:12px}
 .bookgrid button:hover{outline:1px solid #b99a61}
 .chaptergrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:7px;margin-top:12px}
-.chaptergrid button,.verse-list button{background:#f5f2eb;color:#283342}
+.chaptergrid button,.verse-list button{background:var(--soft-2);color:var(--ink)}
 .chaptergrid button.selected,.verse-list button.done{background:var(--navy);color:white}
 .bible-verses{font-size:18px;line-height:2.05;overflow-wrap:anywhere}.bible-verse .words{line-height:inherit}.bible-verse{display:flex;gap:12px;padding:10px 8px;border-bottom:1px solid var(--line);border-radius:7px;cursor:pointer}.bible-verse:hover{background:#f8f5ef}.bible-verse.read{background:#edf4ee}.bible-verse .num{flex:0 0 28px;color:var(--gold);font-weight:700;font-size:.85em;padding-top:3px}.bible-verse.read .num:after{content:" ✓";color:#2d7650}.bible-verse .words{flex:1;white-space:pre-wrap}
 .verse-note-action{flex:0 0 auto;align-self:center;padding:6px 9px!important;background:transparent!important;color:#526174!important;border:1px solid var(--line)!important;font-size:12px!important;white-space:nowrap}
 .verse-note-action:hover{border-color:var(--gold)!important;color:var(--navy)!important;background:#f8f2e5!important}
-.chaptergrid button.part{background:#ece3cd}.chaptergrid button.done{background:#cfe0d3;color:#172b43}.chaptergrid button.selected{outline:2px solid var(--gold)}.fn{font-size:.62em;color:#9aa0a6;margin-left:1px;vertical-align:super;line-height:0}
+.chaptergrid button.part{background:var(--sel-bg)}.chaptergrid button.done{background:var(--read-bg);color:var(--navy)}.chaptergrid button.selected{outline:2px solid var(--gold)}.fn{font-size:.62em;color:#9aa0a6;margin-left:1px;vertical-align:super;line-height:0}
 .verse-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .verse-list button{min-width:42px}.verse-list button.done:before{content:"✓ "}
 
 /* 구절 복사 · 알림 토스트 */
-.bible-verse.sel{background:#fff3d6;outline:1px solid var(--gold)}
+.bible-verse.sel{background:var(--sel-bg);outline:1px solid var(--gold)}
 .bible-verse.sel .num:after{content:" ●";color:var(--gold)}
-.copybar{position:fixed;z-index:45;background:#fffefaf5;backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 -2px 16px #00000026;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;left:50%;transform:translateX(-50%);bottom:12px;width:min(680px,calc(100% - 24px));border-radius:12px}
+.copybar{position:fixed;z-index:45;background:color-mix(in srgb, var(--surface) 96%, transparent);backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 -2px 16px #00000026;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;left:50%;transform:translateX(-50%);bottom:12px;width:min(680px,calc(100% - 24px));border-radius:12px}
 .copybar button{padding:8px 12px;font-size:13px}
 .copybar .cnt{font-weight:600;color:var(--navy);flex:1;min-width:84px}
 body.copy-mode .read-dock{display:none!important}
@@ -65,7 +65,7 @@ body.copy-mode main{padding-bottom:130px}
 .noteday{font-size:12px;color:var(--gold);letter-spacing:1px;margin:14px 0 6px;font-weight:700}
 /* 공유 카드 모달 */
 .modal{position:fixed;inset:0;background:#000000a6;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px}
-.modal-box{background:#fffefa;border-radius:14px;padding:14px;max-width:460px;width:100%;max-height:96vh;overflow:auto}
+.modal-box{background:var(--surface);border-radius:14px;padding:14px;max-width:460px;width:100%;max-height:96vh;overflow:auto}
 #cardCanvas{width:100%;height:auto;border-radius:8px;display:block;margin:10px 0;box-shadow:0 2px 14px #00000033}
 /* 하단 탭 · 읽기 고정 바 */
 .bottom-nav{display:none}
@@ -96,7 +96,7 @@ body.copy-mode main{padding-bottom:130px}
   .bookgrid{grid-template-columns:repeat(2,1fr)}
   .read-dock{
     display:flex;position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));
-    z-index:35;background:#fffefaee;backdrop-filter:blur(8px);
+    z-index:35;background:color-mix(in srgb, var(--surface) 93%, transparent);backdrop-filter:blur(8px);
     border-top:1px solid var(--line);padding:8px 10px;gap:8px;justify-content:center;
     box-shadow:0 -2px 12px #00000014
   }
@@ -121,7 +121,7 @@ html[data-theme="dark"]{color-scheme:dark}
 html[data-theme="dark"]{
   --navy:#9ec0e6;--gold:#d4b574;--ink:#e6e1d6;--line:#3a4250;
   --bg:#12161c;--surface:#171c24;--card:#1e2530;--muted:#9aa3ad;
-  --paper:#1a212c;--alt-btn:#2a3340;--progress-bg:#2a3340;
+  --paper:#1a212c;--alt-btn:#2a3340;--progress-bg:#2a3340;--soft:#222a36;--soft-2:#1c2430;--ok-bg:#1a2a22;--ok-border:#2d5a40;--ok-text:#8fd0a4;--today-bg:#3a3220;
   --focus:#d4b574;--aside-text:#c5ced8;--brand:#e6d3a7;--brand-sub:#a8b3bf;
   --danger:#f0a0a0;--notice-bg:#2a2418;--read-bg:#1a2a22;--sel-bg:#3a3220;
 }

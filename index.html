@@ -29,11 +29,14 @@
 <main id="main">
 <section id="home"><div class="eyebrow">DAILY SCRIPTURE JOURNEY</div><div class="h1">오늘의 통독</div>
 <p class="muted" id="today"></p>
-<div class="card" id="homeOneLine">
-<div class="row" style="justify-content:space-between"><b style="color:var(--navy)">오늘의 한 줄</b><span class="small muted" id="oneLineStreak"></span></div>
-<div class="row" style="margin-top:8px;align-items:stretch;flex-wrap:nowrap"><input id="oneLine" placeholder="오늘 마음에 남은 말씀 한 줄, 감사 한 가지" maxlength="200" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){event.preventDefault();saveOneLine()}"><button type="button" onclick="saveOneLine()">기록</button></div>
-<div class="row" style="margin-top:8px"><label class="small">구절 <input id="oneLineVerse" placeholder="예: 요한 3,16 (선택)" style="padding:6px 8px;font-size:13px;width:190px" oninput="this.dataset.touched='1'"></label></div>
-<div id="oneLineRecent" style="margin-top:10px"></div>
+<div class="card" id="homePlanShortcut">
+<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+  <div>
+    <b style="color:var(--navy)">통독 계획</b>
+    <p class="small muted" style="margin:4px 0 0">새 계획을 만들거나 저장된 계획을 편집·관리합니다.</p>
+  </div>
+  <button type="button" onclick="view('plan')">통독 계획 열기</button>
+</div>
 </div>
 <p class="muted" id="homeHint">진행 중인 통독 계획입니다. 최대 5개까지 저장할 수 있습니다.</p>
 <div id="homePlanList" style="display:flex;flex-direction:column;gap:14px;margin-top:12px"></div>
@@ -214,7 +217,14 @@
 </details>
 </div>
 </section>
-<section id="notes" class="hidden"><div class="eyebrow">LECTIO DIVINA</div><div class="h1">묵상 노트</div><div class="card"><label>날짜 <input type="date" id="ndate"></label><p><input id="verse" placeholder="성경 구절 예: 창세기 1,1" style="width:100%"></p><label>말씀과 묵상</label><textarea id="reflection"></textarea><p><label>실천 다짐</label></p><textarea id="resolution"></textarea><p><button onclick="saveNote()">묵상 저장</button></p></div><div class="card"><h3 style="margin:0">저장한 묵상 <span class="small muted" id="noteCount"></span></h3>
+<section id="notes" class="hidden"><div class="eyebrow">LECTIO DIVINA</div><div class="h1">묵상 노트</div>
+<div class="card" id="homeOneLine">
+<div class="row" style="justify-content:space-between"><b style="color:var(--navy)">오늘의 한 줄</b><span class="small muted" id="oneLineStreak"></span></div>
+<div class="row" style="margin-top:8px;align-items:stretch;flex-wrap:nowrap"><input id="oneLine" placeholder="오늘 마음에 남은 말씀 한 줄, 감사 한 가지" maxlength="200" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){event.preventDefault();saveOneLine()}"><button type="button" onclick="saveOneLine()">기록</button></div>
+<div class="row" style="margin-top:8px"><label class="small">구절 <input id="oneLineVerse" placeholder="예: 요한 3,16 (선택)" style="padding:6px 8px;font-size:13px;width:190px" oninput="this.dataset.touched='1'"></label></div>
+<div id="oneLineRecent" style="margin-top:10px"></div>
+</div>
+<div class="card"><label>날짜 <input type="date" id="ndate"></label><p><input id="verse" placeholder="성경 구절 예: 창세기 1,1" style="width:100%"></p><label>말씀과 묵상</label><textarea id="reflection"></textarea><p><label>실천 다짐</label></p><textarea id="resolution"></textarea><p><button onclick="saveNote()">묵상 저장</button></p></div><div class="card"><h3 style="margin:0">저장한 묵상 <span class="small muted" id="noteCount"></span></h3>
 <div class="row" style="margin-top:10px"><input id="noteSearch" type="search" placeholder="구절·내용 검색" oninput="renderNotes()" style="flex:1;min-width:140px"><select id="noteSort" onchange="renderNotes()"><option value="new">최신순</option><option value="upd">수정일순</option><option value="old">오래된순</option></select></div>
 <div class="row" id="noteChips" style="margin-top:8px;gap:6px"><button type="button" class="alt chip on" data-f="all" onclick="setNoteFilter('all')">전체</button><button type="button" class="alt chip" data-f="line" onclick="setNoteFilter('line')">한 줄</button><button type="button" class="alt chip" data-f="note" onclick="setNoteFilter('note')">묵상</button></div>
 <div id="noteList" style="margin-top:10px"></div></div></section>

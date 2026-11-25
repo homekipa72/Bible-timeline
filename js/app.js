@@ -387,7 +387,7 @@ function view(id,planId){
   if(id==='home')dashboard();
   if(id==='missa'&&!missaLoaded)loadMissa();
   if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}renderRangePreview();renderSavedPlans();syncPeriodFromAuto();preview();}
-  if(id==='notes')renderNotes();
+  if(id==='notes'){renderNotes();try{renderOneLine();}catch(e){}}
   if(id==='stats')stats();
   if(id==='read'){loadChapter(false);renderReadPlanPreview();updateMarkButtons();}
   window.scrollTo(0,0);
@@ -533,7 +533,7 @@ function renderTodayList(){
   for(const p of savedPlans){
     const items=todayItemsForPlan(p);
     const doneN=items.filter(x=>x.done).length;
-    html+='<div style="margin-bottom:14px;padding:12px;border-radius:10px;border:1px solid var(--line);background:#faf8f3">';
+    html+='<div style="margin-bottom:14px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--soft)">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>'+safe(p.name)+'</b><span class="small muted">'+doneN+'/'+items.length+' · '+p.days+'일 중 '+dayIndexForPlan(p)+'일차</span></div>';
     if(!items.length){
       html+='<p class="small muted">오늘 배정 분량이 없습니다.</p>';
@@ -541,7 +541,7 @@ function renderTodayList(){
       html+=items.map(it=>{
         const bg=it.done?'#e8f5e9':'#fff';
         const border=it.done?'#a5d6a7':'var(--line)';
-        return '<button type="button" data-plan-id="'+safe(it.planId)+'" onclick="openReading('+it.book+','+it.chapter+',this.dataset.planId)" style="text-align:left;width:100%;margin:4px 0;padding:10px 12px;border-radius:8px;border:1px solid '+border+';background:'+bg+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>'+it.label+'</b></span><span class="small" style="color:'+(it.done?'#2e7d32':'#78818a')+'">'+(it.done?'완료':'미완료')+'</span></button>';
+        return '<button type="button" data-plan-id="'+safe(it.planId)+'" onclick="openReading('+it.book+','+it.chapter+',this.dataset.planId)" style="text-align:left;width:100%;margin:4px 0;padding:10px 12px;border-radius:8px;border:1px solid '+border+';background:'+bg+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>'+it.label+'</b></span><span class="small" style="color:'+(it.done?'var(--ok-text)':'var(--muted)')+'">'+(it.done?'완료':'미완료')+'</span></button>';
       }).join('');
     }
     html+='</div>';
@@ -835,7 +835,7 @@ function renderSavedPlans(){
     let done=0;
     for(const it of seq) if(planChapterDone(p.id,verseKey(it.book,it.chapter))) done++;
     const pct=seq.length?Math.round(done/seq.length*100):0;
-    return '<div style="padding:12px;margin:8px 0;border-radius:10px;border:1px solid var(--line);background:#faf8f3"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+safe(p.name)+'</b><div class="small muted">'+p.start+' 시작 · '+p.days+'일 · '+done+'/'+seq.length+' ('+pct+'%)</div><div class="progress" style="margin-top:6px"><span style="width:'+pct+'%"></span></div></div><div class="row" style="gap:6px"><button type="button" class="alt" style="padding:6px 10px;font-size:12px" data-plan-id="'+safe(p.id)+'" onclick="editSavedPlan(this.dataset.planId)">편집</button><button type="button" class="alt" style="padding:6px 10px;font-size:12px" onclick="deleteSavedPlan('+idx+')">삭제</button></div></div></div>';
+    return '<div style="padding:12px;margin:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--soft)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+safe(p.name)+'</b><div class="small muted">'+p.start+' 시작 · '+p.days+'일 · '+done+'/'+seq.length+' ('+pct+'%)</div><div class="progress" style="margin-top:6px"><span style="width:'+pct+'%"></span></div></div><div class="row" style="gap:6px"><button type="button" class="alt" style="padding:6px 10px;font-size:12px" data-plan-id="'+safe(p.id)+'" onclick="editSavedPlan(this.dataset.planId)">편집</button><button type="button" class="alt" style="padding:6px 10px;font-size:12px" onclick="deleteSavedPlan('+idx+')">삭제</button></div></div></div>';
   }).join('');
 }
 function editSavedPlan(planId){
@@ -917,7 +917,7 @@ function renderPeriodChecks(){
   $('periodChecks').innerHTML=periods.map(p=>{
     const on=customPeriodSet.includes(p.id);
     const booksLabel=(p.desc?p.desc+' · ':'')+(periodBookLabels[p.id]||'');
-    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#f7f4ed;border:1px solid var(--line)"><input type="checkbox" style="margin-top:3px" data-pid="'+p.id+'" '+(on?'checked':'')+' onchange="toggleCustomPeriod('+p.id+',this.checked)"><span style="flex:1"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+p.color+';border:'+(p.id===12?'1px solid #cbd5e1':'none')+';flex-shrink:0"></span><b>'+p.name+'</b></span><span class="small muted" style="display:block;margin-top:4px;line-height:1.45">'+booksLabel+'</span></span></label>';
+    return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--soft);border:1px solid var(--line)"><input type="checkbox" style="margin-top:3px" data-pid="'+p.id+'" '+(on?'checked':'')+' onchange="toggleCustomPeriod('+p.id+',this.checked)"><span style="flex:1"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:'+p.color+';border:'+(p.id===12?'1px solid #cbd5e1':'none')+';flex-shrink:0"></span><b>'+p.name+'</b></span><span class="small muted" style="display:block;margin-top:4px;line-height:1.45">'+booksLabel+'</span></span></label>';
   }).join('');
 }
 function toggleCustomPeriod(pid, on){
@@ -933,7 +933,7 @@ function renderBookChecks(){
   const set=new Set(customBookSet.map(Number));
   $('bookChecks').innerHTML=books.map((b,bi)=>{
     const on=set.has(bi);
-    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:#f7f4ed;font-size:13px"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleCustomBook('+bi+',this.checked)"><span>'+b[0]+'</span></label>';
+    return '<label style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--soft);font-size:13px"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleCustomBook('+bi+',this.checked)"><span>'+b[0]+'</span></label>';
   }).join('');
 }
 function toggleCustomBook(bi, on){
@@ -1482,7 +1482,7 @@ function applyChartData(d){
             }}
           },
           scales:{
-            x:{stacked:true, grid:{color:'#f0ebe3'}, ticks:{precision:0}},
+            x:{stacked:true, grid:{color:'rgba(128,128,128,0.25)'}, ticks:{precision:0}},
             y:{stacked:true, grid:{display:false}, ticks:{font:{size:11}}}
           }
         }
@@ -1554,7 +1554,7 @@ function applyChartData(d){
             }
           }}},
           scales:{
-            y:{min:0, max:100, ticks:{callback:v=>v+'%'}, grid:{color:'#f0ebe3'}},
+            y:{min:0, max:100, ticks:{callback:v=>v+'%'}, grid:{color:'rgba(128,128,128,0.25)'}},
             x:{ticks:{font:{size:10}}, grid:{display:false}}
           }
         }
@@ -1572,8 +1572,8 @@ function applyChartData(d){
   if($('testamentProgress')){
     const otP=d.otT?Math.round(d.otD/d.otT*100):0, ntP=d.ntT?Math.round(d.ntD/d.ntT*100):0;
     $('testamentProgress').innerHTML=
-      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>구약</span><span class="muted">'+d.otD+' / '+d.otT+' · '+otP+'%</span></div><div class="progress"><span style="width:'+otP+'%;background:#172b43"></span></div></div>'+
-      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>신약</span><span class="muted">'+d.ntD+' / '+d.ntT+' · '+ntP+'%</span></div><div class="progress"><span style="width:'+ntP+'%;background:#b99a61"></span></div></div>';
+      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>구약</span><span class="muted">'+d.otD+' / '+d.otT+' · '+otP+'%</span></div><div class="progress"><span style="width:'+otP+'%;background:var(--navy)"></span></div></div>'+
+      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>신약</span><span class="muted">'+d.ntD+' / '+d.ntT+' · '+ntP+'%</span></div><div class="progress"><span style="width:'+ntP+'%;background:var(--gold)"></span></div></div>';
   }
 }
 
@@ -1859,7 +1859,7 @@ function catchUpHtml(p,pr){
   let h='';
   const follow=p.catchUp==='follow';
   if(!follow&&pr.backlog.length){
-    h+='<div class="notice" style="margin-top:12px;border-left-color:#e0a050;background:#fff6e8">'+
+    h+='<div class="notice" style="margin-top:12px;border-left-color:#e0a050;background:var(--card)6e8">'+
       '<b>밀린 분량 '+pr.backlog.length+'개</b> · '+safe(pr.backlog[0].label)+(pr.backlog.length>1?' 외':'')+
       '<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">'+
       '<button type="button" style="padding:7px 10px;font-size:13px" onclick="readBacklog(\''+p.id+'\')">밀린 분량 읽기</button>'+

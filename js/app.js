@@ -373,6 +373,135 @@ async function loadMissa(date){
     missaLoaded=false;setMissaStatus('매일미사를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.',true);
   }
 }
+
+/* ===== 통독 인증 배지 ===== */
+const BADGE_DEFS=[
+  {id:'all', name:'전체 통독', icon:'✝', sentence:'처음부터 끝까지, 말씀이 내 길이 되었다', books:'all'},
+  {id:'ot', name:'구약', icon:'🕯', sentence:'약속의 땅을 향해 걸었다', range:[0,45]},
+  {id:'nt', name:'신약', icon:'🕊', sentence:'복음이 내 안에 심겼다', range:[46,72]},
+  {id:'chrono', name:'연대기', icon:'🕰', sentence:'역사의 흐름 속에서 하나님을 만났다', chrono:true},
+  {id:'pentateuch', name:'오경', icon:'📜', sentence:'율법 아래서 은혜를 배웠다', range:[0,4]},
+  {id:'history', name:'역사서', icon:'🏛', sentence:'왕과 백성의 이야기를 따라 걸었다', range:[5,20]},
+  {id:'wisdom', name:'시서·지혜서', icon:'🎶', sentence:'노래하고, 질문하고, 침묵했다', range:[21,27]},
+  {id:'prophets', name:'예언서', icon:'🔥', sentence:'정의를 외치는 목소리에 귀 기울였다', range:[28,45]},
+  {id:'gospels', name:'복음서', icon:'✝', sentence:'「나를 따르라」는 부름에 응답했다', range:[46,49]}
+];
+
+let badgeAwards=jget('badgeAwards_v1',{},isPlainObj);
+let badgeCompleteSnap=jget('badgeCompleteSnap_v1',{},isPlainObj);
+
+function isChapterDoneForBadge(bi,ch){
+  return !!chapterRead[bi+':'+ch];
+}
+function booksFullyRead(from,to){
+  for(let bi=from;bi<=to;bi++){
+    const total=books[bi][2];
+    for(let c=1;c<=total;c++) if(!isChapterDoneForBadge(bi,c)) return false;
+  }
+  return true;
+}
+function chronoFullyRead(){
+  if(typeof chronoRanges==='undefined'||!chronoRanges||!chronoRanges.length) return false;
+  for(const r of chronoRanges){
+    const bi=r[0], from=r[1], to=r[2];
+    for(let c=from;c<=to;c++) if(!isChapterDoneForBadge(bi,c)) return false;
+  }
+  return true;
+}
+function isBadgeComplete(def){
+  if(def.books==='all') return booksFullyRead(0,books.length-1);
+  if(def.chrono) return chronoFullyRead();
+  if(def.range) return booksFullyRead(def.range[0],def.range[1]);
+  return false;
+}
+function badgeProgress(def){
+  let done=0,total=0;
+  const addBook=(bi,from,to)=>{
+    const end=to||books[bi][2];
+    const start=from||1;
+    for(let c=start;c<=end;c++){ total++; if(isChapterDoneForBadge(bi,c)) done++; }
+  };
+  if(def.books==='all'){ for(let bi=0;bi<books.length;bi++) addBook(bi); }
+  else if(def.chrono && chronoRanges){ for(const r of chronoRanges) addBook(r[0],r[1],r[2]); }
+  else if(def.range){ for(let bi=def.range[0];bi<=def.range[1];bi++) addBook(bi); }
+  const pct=total?Math.round(done/total*100):0;
+  return {done,total,pct};
+}
+function saveBadgeState(){
+  store.badgeAwards_v1=JSON.stringify(badgeAwards);
+  store.badgeCompleteSnap_v1=JSON.stringify(badgeCompleteSnap);
+}
+function awardBadge(def){
+  const prev=badgeAwards[def.id]||{count:0};
+  const count=(prev.count||0)+1;
+  const now=new Date().toISOString();
+  badgeAwards[def.id]={count, lastAt:now, firstAt:prev.firstAt||now};
+  saveBadgeState();
+  showBadgeModal(def,count);
+}
+function checkBadgeAwards(){
+  const newly=[];
+  for(const def of BADGE_DEFS){
+    const complete=isBadgeComplete(def);
+    const was=!!badgeCompleteSnap[def.id];
+    if(complete && !was){
+      awardBadge(def);
+      newly.push(def.id);
+    }
+    badgeCompleteSnap[def.id]=complete;
+  }
+  if(newly.length) saveBadgeState();
+  return newly;
+}
+function showBadgeModal(def,count){
+  const m=$('badgeModal'); if(!m) return;
+  if($('badgeModalIcon')) $('badgeModalIcon').textContent=def.icon||'✦';
+  if($('badgeModalTitle')) $('badgeModalTitle').textContent=def.name;
+  if($('badgeModalSentence')) $('badgeModalSentence').textContent='「'+def.sentence+'」';
+  const times=count>1?(' · '+count+'번째 순례'):' · 첫 순례';
+  if($('badgeModalMeta')) $('badgeModalMeta').textContent='증표를 받았습니다'+times;
+  m.classList.remove('hidden');
+}
+function closeBadgeModal(){ const m=$('badgeModal'); if(m) m.classList.add('hidden'); }
+function renderBadges(){
+  const grid=$('badgeGrid'); if(!grid) return;
+  let unlocked=0;
+  const html=BADGE_DEFS.map(def=>{
+    const prog=badgeProgress(def);
+    const award=badgeAwards[def.id];
+    const has=award&&award.count>0;
+    if(has) unlocked++;
+    const complete=isBadgeComplete(def);
+    const countLabel=has?('×'+award.count):'';
+    const sub=has
+      ? (complete?'완료 유지 중':'이전에 완주')
+      : (prog.pct+'% · '+prog.done+'/'+prog.total);
+    return '<button type="button" class="badge-card '+(has?'unlocked':'locked')+'" data-badge="'+def.id+'" onclick="openBadgeDetail(\''+def.id+'\')">'+
+      (has?'<span class="badge-count">'+countLabel+'</span>':'')+
+      '<span class="badge-ico" aria-hidden="true">'+(has?def.icon:'🔒')+'</span>'+
+      '<span class="badge-name">'+safe(def.name)+'</span>'+
+      '<span class="small muted">'+sub+'</span>'+
+      '</button>';
+  }).join('');
+  grid.innerHTML=html;
+  if($('badgeSummary')) $('badgeSummary').textContent='획득 '+unlocked+' · 전체 '+BADGE_DEFS.length;
+}
+function openBadgeDetail(id){
+  const def=BADGE_DEFS.find(b=>b.id===id); if(!def) return;
+  const award=badgeAwards[id];
+  const prog=badgeProgress(def);
+  const complete=isBadgeComplete(def);
+  if(award&&award.count){
+    showBadgeModal(def, award.count);
+    if($('badgeModalMeta')){
+      const d=award.lastAt?new Date(award.lastAt).toLocaleDateString('ko-KR'):'';
+      $('badgeModalMeta').textContent=(d?d+' 기록 · ':'')+award.count+'회 완주 · 진행 '+prog.pct+'%'+(complete?' (유지 중)':'');
+    }
+  } else {
+    alert(def.name+'\\n\\n「'+def.sentence+'」\\n\\n진행: '+prog.done+' / '+prog.total+' ('+prog.pct+'%)\\n아직 증표를 받지 못했습니다.');
+  }
+}
+
 function view(id,planId){
   if(id==='read') activeReadPlanId=planId||'';
   document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));
@@ -389,6 +518,7 @@ function view(id,planId){
   if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}renderRangePreview();renderSavedPlans();syncPeriodFromAuto();preview();}
   if(id==='notes'){renderNotes();try{renderOneLine();}catch(e){}}
   if(id==='stats')stats();
+  if(id==='badges'){checkBadgeAwards();renderBadges();}
   if(id==='read'){refreshReadBookSelect(true);refreshReadChapterSelect(selectedChapter);loadChapter(false);renderReadPlanPreview();updateMarkButtons();}
   window.scrollTo(0,0);
 }
@@ -599,7 +729,26 @@ function updateMarkButtons(){
   if($('btnMarkCh')) $('btnMarkCh').textContent=label;
   if($('btnMarkChDock')) $('btnMarkChDock').textContent=short;
 }
-function markChapter(){const key=verseKey(selectedBook,selectedChapter);if(activeReadPlanId){const done=!planChapterDone(activeReadPlanId,key);setPlanChapterDone(activeReadPlanId,key,done,done?currentVerses.map(v=>v.n):[]);rememberLastRead(selectedBook,selectedChapter,activeReadPlanId)}else{chapterRead[key]=!chapterRead[key];if(chapterRead[key]&&currentVerses.length)verseRead[key]=currentVerses.map(v=>v.n);rememberLastRead(selectedBook,selectedChapter)}saveVerseData();renderChapter();renderReadPlanPreview();updateMarkButtons();if($("homePlanList"))renderHomePlans()}
+function markChapter(){
+  const key=verseKey(selectedBook,selectedChapter);
+  if(activeReadPlanId){
+    const done=!planChapterDone(activeReadPlanId,key);
+    setPlanChapterDone(activeReadPlanId,key,done,done?currentVerses.map(v=>v.n):[]);
+    rememberLastRead(selectedBook,selectedChapter,activeReadPlanId);
+    // 누적·배지용 전역 장 기록도 함께 갱신
+    if(done){ chapterRead[key]=true; if(currentVerses.length) verseRead[key]=currentVerses.map(v=>v.n); }
+  } else {
+    chapterRead[key]=!chapterRead[key];
+    if(chapterRead[key]&&currentVerses.length) verseRead[key]=currentVerses.map(v=>v.n);
+    rememberLastRead(selectedBook,selectedChapter);
+  }
+  saveVerseData();
+  renderChapter();
+  renderReadPlanPreview();
+  updateMarkButtons();
+  if($("homePlanList")) renderHomePlans();
+  try{ checkBadgeAwards(); if($("badgeGrid")) renderBadges(); }catch(e){}
+}
 function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if(!confirm(chLabel(selectedBook,selectedChapter)+'의 읽음 기록을 지울까요?'))return;if(activeReadPlanId)setPlanChapterDone(activeReadPlanId,key,false,[]);else{delete verseRead[key];delete chapterRead[key];saveVerseData()}renderChapter()}
 function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
@@ -1770,7 +1919,7 @@ function gatherBackup(){
     exportedAt:new Date().toISOString(),
     days, start, planType, customPeriods:customPeriodSet, customBooks:customBookSet,
     savedPlans, activePlanId, lastReadByPlan, planReadingState, cumulativeReading,
-    chapterRead, verseRead, verseTotal, notes,
+    chapterRead, verseRead, verseTotal, notes, badgeAwards, badgeCompleteSnap,
     hideNotes: store.hideNotes||'0',
     reading:{
       fontFamily: store.fontFamily||'',
@@ -1871,7 +2020,10 @@ function applyBackup(data,opts){
   if(data.chapterRead) chapterRead=data.chapterRead;
   if(data.verseRead) verseRead=data.verseRead;
   if(data.verseTotal) verseTotal=data.verseTotal;
-  if(data.notes){ notes=data.notes; normalizeNotes(); }
+  if(data.notes){ notes=data.notes;
+  if(data.badgeAwards&&typeof data.badgeAwards==="object") badgeAwards=data.badgeAwards;
+  if(data.badgeCompleteSnap&&typeof data.badgeCompleteSnap==="object") badgeCompleteSnap=data.badgeCompleteSnap;
+  try{saveBadgeState()}catch(e){} normalizeNotes(); }
   if(data.days) days=+data.days;
   if(data.start) start=data.start;
   if(data.planType) planType=data.planType;
@@ -2584,3 +2736,5 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
     navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('SW 등록 실패',e));
   });
 }
+
+document.addEventListener('click',function(e){ const m=$('badgeModal'); if(m&&!m.classList.contains('hidden')&&e.target===m) closeBadgeModal(); });

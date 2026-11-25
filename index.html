@@ -228,41 +228,72 @@
 <div class="row" style="margin-top:10px"><input id="noteSearch" type="search" placeholder="구절·내용 검색" oninput="renderNotes()" style="flex:1;min-width:140px"><select id="noteSort" onchange="renderNotes()"><option value="new">최신순</option><option value="upd">수정일순</option><option value="old">오래된순</option></select></div>
 <div class="row" id="noteChips" style="margin-top:8px;gap:6px"><button type="button" class="alt chip on" data-f="all" onclick="setNoteFilter('all')">전체</button><button type="button" class="alt chip" data-f="line" onclick="setNoteFilter('line')">한 줄</button><button type="button" class="alt chip" data-f="note" onclick="setNoteFilter('note')">묵상</button></div>
 <div id="noteList" style="margin-top:10px"></div></div></section>
-<section id="stats" class="hidden"><div class="eyebrow">YOUR JOURNEY</div><div class="h1">통독 통계와 기록</div>
-<div class="card"><h3>통독 계획 한눈에 보기</h3>
-<p class="small muted" id="planProgressLabel">저장된 계획 기준으로 항목별 진도를 표시합니다.</p>
-<div id="planItemProgress" style="margin-top:10px"></div>
-</div>
-<div class="card"><h3>전체 읽기 기록</h3><p class="small muted">계획별 진행 기록과 과거 계획을 포함한 누적 기록은 별도로 표시됩니다. 누적 기록은 계획 삭제 후에도 유지되며 백업에 포함됩니다.</p><div class="grid"><div class="card">완료한 분량<div class="metric" id="sDone">0</div></div><div class="card">진행률<div class="metric" id="sPct">0%</div></div><div class="card">묵상 노트<div class="metric" id="sNotes">0</div></div></div>
-<div class="grid"><div class="card">읽음 표시한 절<div class="metric" id="sVerses">0</div></div><div class="card">완료한 분량<div class="metric" id="sChapters">0</div></div><div class="card">절 기록 책 수<div class="metric" id="sBooks">0</div></div></div>
+<section id="stats" class="hidden"><div class="eyebrow">YOUR JOURNEY</div><div class="h1">통독 통계</div>
+<p class="muted" id="planProgressLabel">진행 중인 계획별 통계와, 지금까지의 전체 누적 통독 통계를 나란히 확인합니다.</p>
 
+<div class="card stats-section">
+  <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+    <h3 style="margin:0">1. 진행 중인 통독 계획</h3>
+    <span class="small muted">계획마다 독립된 진도</span>
+  </div>
+  <div id="planItemProgress" class="stats-plan-list" style="margin-top:12px"></div>
 </div>
-<div class="card">
-<details id="chartDetails" open>
-<summary style="cursor:pointer;font-weight:600;color:var(--navy);list-style:none;display:flex;justify-content:space-between;align-items:center">
-<span>기기 전체 읽기 진도 차트</span><span class="small muted">접기/펼치기</span>
-</summary>
-<div style="margin-top:14px">
-<h3 style="margin:0 0 8px;font-size:15px">12시대 진도</h3>
-<div style="position:relative;height:280px"><canvas id="periodChart"></canvas></div>
-<div id="periodProgress" class="small" style="margin-top:8px"></div>
-<h3 style="margin:18px 0 8px;font-size:15px">구약 · 신약 진도</h3>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center">
-<div style="position:relative;height:180px"><canvas id="testamentChart"></canvas></div>
-<div id="testamentProgress"></div>
+
+<div class="card stats-section">
+  <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+    <h3 style="margin:0">2. 전체 누적 통독 통계</h3>
+    <span class="small muted">계획 삭제 후에도 유지 · 백업 포함</span>
+  </div>
+
+  <div class="stats-overview" style="margin-top:14px">
+    <div class="stats-ring-wrap">
+      <div class="stats-ring" id="overallRing" style="--pct:0" aria-hidden="true">
+        <div class="stats-ring-inner">
+          <div class="metric" id="sPct">0%</div>
+          <div class="small muted">전체 장 기준</div>
+        </div>
+      </div>
+      <p class="small muted" style="margin:8px 0 0;text-align:center" id="overallRingCaption">0 / 0장</p>
+    </div>
+    <div class="grid stats-metrics">
+      <div class="card soft-card">완료 장<div class="metric" id="sDone">0</div><div class="small muted">장 단위 완료</div></div>
+      <div class="card soft-card">읽은 절<div class="metric" id="sVerses">0</div><div class="small muted">절 표시 합계</div></div>
+      <div class="card soft-card">기록한 책<div class="metric" id="sBooks">0</div><div class="small muted">절·장 기록이 있는 책</div></div>
+      <div class="card soft-card">묵상·한 줄<div class="metric" id="sNotes">0</div><div class="small muted">노트 전체</div></div>
+      <div class="card soft-card">누적 계획-장<div class="metric" id="sCumPlanCh">0</div><div class="small muted">계획별 완료 합</div></div>
+      <div class="card soft-card">고유 완료 장<div class="metric" id="sCumUnique">0</div><div class="small muted">중복 제거</div></div>
+    </div>
+  </div>
+
+  <div id="testamentProgress" style="margin-top:16px"></div>
+  <div class="hidden"><span id="sChapters">0</span></div>
+
+  <details id="chartDetails" open style="margin-top:16px">
+    <summary style="cursor:pointer;font-weight:600;color:var(--navy);list-style:none;display:flex;justify-content:space-between;align-items:center">
+      <span>시각화 차트</span><span class="small muted">접기/펼치기</span>
+    </summary>
+    <div style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:15px">구약 · 신약 진도</h3>
+      <div style="position:relative;height:200px;max-width:280px;margin:0 auto"><canvas id="testamentChart"></canvas></div>
+      <h3 style="margin:18px 0 8px;font-size:15px">12시대 진도</h3>
+      <div style="position:relative;height:260px"><canvas id="periodChart"></canvas></div>
+      <div id="periodProgress" class="small" style="margin-top:8px"></div>
+      <h3 style="margin:18px 0 8px;font-size:15px">책별 완료 상위</h3>
+      <div style="position:relative;height:220px"><canvas id="bookChart"></canvas></div>
+    </div>
+  </details>
+
+  <details style="margin-top:14px">
+    <summary style="cursor:pointer;font-weight:600;color:var(--navy)">책별 장·절 상세</summary>
+    <div id="verseHistory" class="small" style="margin-top:10px"></div>
+  </details>
 </div>
-<h3 style="margin:18px 0 8px;font-size:15px">책별 완료 상위</h3>
-<div style="position:relative;height:220px"><canvas id="bookChart"></canvas></div>
-</div>
-</details>
-</div>
-<div class="card"><h3>기기 전체 책별 장·절 통독 현황</h3><div id="verseHistory" class="small"></div></div>
 
 <div class="card"><h3>데이터 백업 · 기기 간 동기화 (선택)</h3>
 <p class="small muted">진도·노트·계획은 기본적으로 이 기기 브라우저에만 저장됩니다. 아래 방법으로 다른 기기와 옮기거나 백업할 수 있습니다.</p>
 <div class="row" style="margin-top:10px;flex-wrap:wrap;gap:8px">
 <button class="alt" onclick="exportData()">JSON 내보내기</button>
-<label class="alt" style="display:inline-block;padding:10px 14px;cursor:pointer;border-radius:8px;background:#f5f2eb">JSON 가져오기<input type="file" id="importFile" accept="application/json,.json" onchange="importData(event)" style="display:none"></label>
+<label class="alt" style="display:inline-block;padding:10px 14px;cursor:pointer;border-radius:8px;background:var(--soft-2)">JSON 가져오기<input type="file" id="importFile" accept="application/json,.json" onchange="importData(event)" style="display:none"></label>
 <button class="alt" onclick="copySyncCode()">동기화 코드 복사</button>
 </div>
 <div class="row" style="margin-top:10px">

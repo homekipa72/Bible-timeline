@@ -1583,30 +1583,74 @@ function planTypeLabel(t){
 }
 function renderPlanItemProgress(){
   const box=$('planItemProgress'),label=$('planProgressLabel');if(!box)return;
-  const uniqueKeys=new Set(Object.values(cumulativeReading).filter(r=>r.done).map(r=>r.key));
-  const planOptions=savedPlans.map(p=>'<option value="'+safe(p.id)+'">'+safe(p.name)+'</option>').join('');
-  const selected=store.statsPlanId||((getActivePlan()||{}).id)||((savedPlans[0]||{}).id)||'';
-  let html='<section class="card" style="margin:0 0 12px"><h4 style="margin:0 0 8px">계획별 진행 기록</h4>';
-  if(!savedPlans.length){html+='<p class="muted small">저장된 계획이 없습니다.</p>';}
-  else {html+='<label class="small">확인할 계획 <select id="statsPlanSelect" onchange="store.statsPlanId=this.value;renderPlanItemProgress()">'+planOptions+'</select></label>';const p=savedPlans.find(x=>x.id===selected)||savedPlans[0];if(p){const pr=planProgress(p);store.statsPlanId=p.id;html+='<div style="margin-top:10px"><b>'+safe(p.name)+'</b> · '+pr.done+'/'+pr.total+'장 · '+pr.pct+'% · '+safe(pr.status)+'<div class="progress"><span style="width:'+pr.pct+'%"></span></div><details style="margin-top:8px"><summary class="small" style="cursor:pointer">책별 진도 · 오늘 분량 ('+todayItemsForPlan(p).length+')</summary><div style="margin-top:8px">';const byBook=new Map();for(const it of pr.seq){if(!byBook.has(it.book))byBook.set(it.book,{done:0,total:0});const row=byBook.get(it.book);row.total++;if(planChapterDone(p.id,verseKey(it.book,it.chapter)))row.done++}html+=[...byBook.entries()].sort((a,b)=>a[0]-b[0]).map(([bi,row])=>'<div class="small">'+safe(books[bi][0])+' · '+row.done+'/'+row.total+'</div>').join('');const today=todayItemsForPlan(p);if(today.length)html+='<div class="small" style="margin-top:8px"><b>오늘</b> · '+today.map(it=>safe(it.label)+(it.done?' ✓':'')).join(' · ')+'</div>';html+='</div></details></div>';}}
-  const totalPlanChapters=Object.values(cumulativeReading).filter(r=>r.done).length;
-  html+='</section><section class="card" style="margin:0"><h4 style="margin:0 0 8px">전체 누적 통독 기록</h4><p class="small muted">현재·과거 계획의 완료 기록을 합산합니다. 계획을 삭제해도 이 기록은 유지됩니다.</p><div class="grid"><div>계획-장 완료 기록<div class="metric">'+totalPlanChapters+'</div></div><div>고유 완료 장<div class="metric">'+uniqueKeys.size+'</div></div></div></section>';
-  box.innerHTML=html;if(label)label.textContent='선택한 계획의 진도와 모든 계획의 누적 기록을 따로 확인합니다.';
+  if(label) label.textContent='위는 진행 중인 각 계획의 통계, 아래는 지금까지의 전체 누적 통독 통계입니다.';
+  if(!savedPlans.length){
+    box.innerHTML='<p class="muted small">저장된 통독 계획이 없습니다. 통독 계획에서 새 계획을 만들어 주세요.</p><p style="margin-top:8px"><button type="button" onclick="view(\'plan\')">통독 계획 열기</button></p>';
+    return;
+  }
+  let html='';
+  for(const p of savedPlans){
+    const pr=planProgress(p);
+    const today=todayItemsForPlan(p);
+    const todayDone=today.filter(x=>x.done).length;
+    const stClass=pr.status.indexOf('완료')>=0?'done':(pr.backlog&&pr.backlog.length?'warn':'');
+    const byBook=new Map();
+    for(const it of pr.seq){
+      if(!byBook.has(it.book)) byBook.set(it.book,{done:0,total:0});
+      const row=byBook.get(it.book); row.total++;
+      if(planChapterDone(p.id,verseKey(it.book,it.chapter))) row.done++;
+    }
+    const bookRows=[...byBook.entries()].sort((a,b)=>a[0]-b[0]).map(([bi,row])=>{
+      const bp=row.total?Math.round(row.done/row.total*100):0;
+      return '<div class="small" style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>'+safe(books[bi][0])+'</span><span class="muted">'+row.done+'/'+row.total+' · '+bp+'%</span></div><div class="progress"><span style="width:'+bp+'%"></span></div></div>';
+    }).join('');
+    html+='<article class="stats-plan-card">'+
+      '<div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start">'+
+        '<div><b style="color:var(--navy)">'+safe(p.name)+'</b>'+
+        '<div class="small muted" style="margin-top:3px">'+safe(planTypeLabel(p.planType))+' · '+safe(p.start||'')+' 시작'+(pr.endStr?' · '+pr.endStr+'까지':'')+(p.skipSundays?' · 주일 제외':'')+'</div></div>'+
+        '<span class="status '+stClass+'">'+safe(pr.status)+'</span>'+
+      '</div>'+
+      '<div class="row" style="margin-top:10px;justify-content:space-between"><span><b>'+pr.done+'</b><span class="muted"> / '+pr.total+'장</span></span><span class="muted">'+pr.pct+'%</span></div>'+
+      '<div class="progress" style="margin-top:6px"><span style="width:'+pr.pct+'%"></span></div>'+
+      '<div class="row small" style="margin-top:10px;gap:12px;flex-wrap:wrap">'+
+        '<span>오늘 분량 <b>'+todayDone+'/'+today.length+'</b></span>'+
+        '<span>밀린 분량 <b>'+(pr.backlog?pr.backlog.length:0)+'</b></span>'+
+        (pr.skipped?'<span>건너뜀 <b>'+pr.skipped+'</b></span>':'')+
+      '</div>'+
+      '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">'+
+        '<button type="button" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">오늘 읽기</button>'+
+        '<button type="button" class="alt" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'last\')">이어서 읽기</button>'+
+      '</div>'+
+      '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">책별 진도 · 오늘 목록</summary>'+
+        '<div style="margin-top:8px">'+bookRows+
+        (today.length?'<div class="small" style="margin-top:10px"><b>오늘</b> · '+today.map(it=>safe(it.label)+(it.done?' ✓':'')).join(' · ')+'</div>':'')+
+        '</div></details>'+
+    '</article>';
+  }
+  box.innerHTML=html;
 }
 function stats(){
-  if($('chartDetails')&&window.innerWidth<760)$('chartDetails').open=false;
+  // 모바일에서는 차트 기본 접기, 데스크톱은 펼침
+  if($('chartDetails')) $('chartDetails').open=window.innerWidth>=760;
   updateCharts();
   renderPlanItemProgress();
+  const total=Math.max(1,totalChapters());
   const doneKeys=Object.keys(chapterRead).filter(k=>chapterRead[k]);
-  $('sDone').textContent=doneKeys.length;
-  $('sPct').textContent=Math.round(doneKeys.length/Math.max(1,totalChapters())*100)+'%';
-  $('sNotes').textContent=notes.length;
+  const pct=Math.round(doneKeys.length/total*100);
+  if($('sDone')) $('sDone').textContent=doneKeys.length;
+  if($('sPct')) $('sPct').textContent=pct+'%';
+  if($('sNotes')) $('sNotes').textContent=notes.length;
   let keys=Object.keys(verseRead);
-  $('sVerses').textContent=keys.reduce((n,k)=>n+(verseRead[k]||[]).length,0);
-  $('sChapters').textContent=doneKeys.length;
-  $('sBooks').textContent=new Set(keys.map(k=>k.split(':')[0])).size;
+  if($('sVerses')) $('sVerses').textContent=keys.reduce((n,k)=>n+(verseRead[k]||[]).length,0);
+  if($('sChapters')) $('sChapters').textContent=doneKeys.length;
+  if($('sBooks')) $('sBooks').textContent=new Set([...keys,...doneKeys].map(k=>k.split(':')[0])).size;
+  const cumDone=Object.values(cumulativeReading).filter(r=>r&&r.done);
+  const uniqueKeys=new Set(cumDone.map(r=>r.key));
+  if($('sCumPlanCh')) $('sCumPlanCh').textContent=cumDone.length;
+  if($('sCumUnique')) $('sCumUnique').textContent=uniqueKeys.size;
+  if($('overallRing')) $('overallRing').style.setProperty('--pct', String(pct));
+  if($('overallRingCaption')) $('overallRingCaption').textContent=doneKeys.length+' / '+totalChapters()+'장';
   if($('history')) $('history').textContent='장·절 통독 기록으로 관리합니다.';
-  // (원본에서 정의가 빠져 있던 변수) 기록이 있는 책 목록과 완료한 장 키
   const chKeys=doneKeys;
   const bset=[...new Set([...keys,...doneKeys].map(k=>+k.split(':')[0]))].filter(b=>b>=0&&b<books.length).sort((a,b)=>a-b);
   let rows=bset.map(b=>{
@@ -1618,7 +1662,7 @@ function stats(){
     let [b,c]=k.split(':').map(Number);
     return '<div>'+safe(books[b][0])+' '+c+unit(b)+': '+(verseRead[k]||[]).slice().sort((a,b)=>a-b).join(', ')+'절'+(chapterRead[k]?' · 완료':'')+'</div>';
   }).join('');
-  $('verseHistory').innerHTML=rows?rows+'<details><summary>장별 상세 보기</summary>'+detail+'</details>':'아직 장·절 통독 기록이 없습니다.';
+  if($('verseHistory')) $('verseHistory').innerHTML=rows?rows+'<details><summary>장별 상세 보기</summary>'+detail+'</details>':'아직 장·절 통독 기록이 없습니다.';
 }
 
 function gatherBackup(){

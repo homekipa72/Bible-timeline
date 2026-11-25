@@ -376,16 +376,30 @@ async function loadMissa(date){
 
 /* ===== 통독 인증 배지 ===== */
 const BADGE_DEFS=[
-  {id:'all', name:'전체 통독', icon:'✝', accent:'#8B1E3F', sentence:'처음부터 끝까지, 말씀이 내 길이 되었다', books:'all'},
-  {id:'ot', name:'구약', icon:'🕯', accent:'#4A5D23', sentence:'약속의 땅을 향해 걸었다', range:[0,45]},
-  {id:'nt', name:'신약', icon:'🕊', accent:'#1E4D7B', sentence:'복음이 내 안에 심겼다', range:[46,72]},
-  {id:'chrono', name:'연대기', icon:'🕰', accent:'#C9A227', sentence:'역사의 흐름 속에서 하느님을 만났다', chrono:true},
-  {id:'pentateuch', name:'오경', icon:'📜', accent:'#6B4F2A', sentence:'율법 아래서 은혜를 배웠다', range:[0,4]},
-  {id:'history', name:'역사서', icon:'🏛', accent:'#5C4B3A', sentence:'왕과 백성의 이야기를 따라 걸었다', range:[5,20]},
-  {id:'wisdom', name:'시서·지혜서', icon:'🎶', accent:'#7A5C1E', sentence:'노래하고, 질문하고, 침묵했다', range:[21,27]},
-  {id:'prophets', name:'예언서', icon:'🔥', accent:'#B33A1A', sentence:'정의를 외치는 목소리에 귀 기울였다', range:[28,45]},
-  {id:'gospels', name:'복음서', icon:'✝', accent:'#172b43', sentence:'예수님의 발자취를 따라 걸었다', range:[46,49]},
-  {id:'epistles', name:'서간·묵시', icon:'✉', accent:'#3D4F6F', sentence:'교회와 함께, 끝까지', range:[50,72]}
+  {id:'all', name:'전체 통독', icon:'✝', accent:'#8B1E3F',
+    sentence:'당신의 말씀은 제 발에 등불, 제 길에 빛입니다', ref:'시편 119,105', books:'all'},
+  {id:'ot', name:'구약', icon:'🕯', accent:'#4A5D23',
+    sentence:'나는 너를 큰 민족이 되게 하고, 너에게 복을 내리며, 네 이름을 위대하게 하겠다', ref:'창세기 12,2', range:[0,45]},
+  {id:'nt', name:'신약', icon:'🕊', accent:'#1E4D7B',
+    sentence:'말씀이 사람이 되시어 우리 가운데 사셨다', ref:'요한 1,14', range:[46,72]},
+  {id:'chrono', name:'연대기', icon:'🕰', accent:'#C9A227',
+    sentence:'과거에 하느님께서는 여러 번 여러 가지 모양으로 조상들에게 말씀하셨지만', ref:'히브리 1,1', chrono:true},
+  {id:'pentateuch', name:'오경', icon:'📜', accent:'#6B4F2A',
+    sentence:'너 이스라엘아, 들어라! 주 우리 하느님은 한 분이신 주님이시다', ref:'신명 6,4', range:[0,4]},
+  {id:'history', name:'역사서', icon:'🏛', accent:'#5C4B3A',
+    sentence:'나와 내 집안은 주님을 섬기겠습니다', ref:'여호수아 24,15', range:[5,20]},
+  {id:'wisdom', name:'시서·지혜서', icon:'🎶', accent:'#7A5C1E',
+    sentence:'주님은 나의 목자시니 아쉬울 것 없네', ref:'시편 23,1', range:[21,27]},
+  {id:'prophets', name:'예언서', icon:'🔥', accent:'#B33A1A',
+    sentence:'정의롭게 행동하고 신의를 사랑하며 겸손히 네 하느님과 함께 걸어라', ref:'미카 6,8', range:[28,45]},
+  {id:'gospels', name:'복음서', icon:'✝', accent:'#172b43',
+    sentence:'나를 따라오너라. 내가 너희를 사람 낚는 어부로 만들겠다', ref:'마태 4,19', range:[46,49]},
+  {id:'acts', name:'사도행전', icon:'🔥', accent:'#2E5A88',
+    sentence:'성령께서 여러분에게 내리시면 여러분은 힘을 받아, 땅끝에 이르기까지 나의 증인이 될 것입니다', ref:'사도 1,8', range:[50,50]},
+  {id:'epistles', name:'서간', icon:'✉', accent:'#3D4F6F',
+    sentence:'사랑은 기다리며 사랑을 베풀고, 시기하지 않으며 자랑하지 않습니다', ref:'1코린 13,4', range:[51,71]},
+  {id:'revelation', name:'묵시록', icon:'⭐', accent:'#5B2C6F',
+    sentence:'보라, 내가 모든 것을 새롭게 만든다', ref:'묵시 21,5', range:[72,72]}
 ];
 
 let badgeAwards=jget('badgeAwards_v1',{},isPlainObj);
@@ -468,7 +482,7 @@ function showBadgeModal(def,count,opts){
   currentBadgeShare={def:def, count:count||0};
   if($('badgeModalIcon')) $('badgeModalIcon').textContent=def.icon||'✦';
   if($('badgeModalTitle')) $('badgeModalTitle').textContent=def.name;
-  if($('badgeModalSentence')) $('badgeModalSentence').textContent='「'+def.sentence+'」';
+  if($('badgeModalSentence')) $('badgeModalSentence').innerHTML='「'+safe(def.sentence)+'」'+(def.ref?'<br><span class="small muted" style="font-style:normal">— '+safe(def.ref)+'</span>':'');
   const prog=badgeProgress(def);
   const pil=pilgrimageLabel(count);
   const parts=[];
@@ -486,7 +500,7 @@ async function shareBadge(){
   if(!currentBadgeShare) return;
   const {def,count}=currentBadgeShare;
   const pil=pilgrimageLabel(count);
-  const text='말씀의 길 · 순례의 증표\\n'+def.name+(pil?' ('+pil+')':'')+'\\n「'+def.sentence+'」';
+  const text='말씀의 길 · 순례의 증표\n'+def.name+(pil?' ('+pil+')':'')+'\n「'+def.sentence+'」'+(def.ref?'\n— '+def.ref:'');
   try{
     if(navigator.share){ await navigator.share({title:def.name, text:text}); return; }
   }catch(e){ if(e&&e.name==='AbortError') return; }
@@ -555,7 +569,7 @@ function openBadgeDetail(id){
   } else {
     showBadgeModal(def, 0, {fresh:false});
     if($('badgeModalMeta')) $('badgeModalMeta').textContent='진행 '+prog.done+' / '+prog.total+' ('+prog.pct+'%) · 아직 증표 없음';
-    if($('badgeModalSentence')) $('badgeModalSentence').textContent='「'+def.sentence+'」';
+    if($('badgeModalSentence')) $('badgeModalSentence').innerHTML='「'+safe(def.sentence)+'」'+(def.ref?'<br><span class="small muted" style="font-style:normal">— '+safe(def.ref)+'</span>':'');
   }
 }
 

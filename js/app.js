@@ -376,19 +376,21 @@ async function loadMissa(date){
 
 /* ===== 통독 인증 배지 ===== */
 const BADGE_DEFS=[
-  {id:'all', name:'전체 통독', icon:'✝', sentence:'처음부터 끝까지, 말씀이 내 길이 되었다', books:'all'},
-  {id:'ot', name:'구약', icon:'🕯', sentence:'약속의 땅을 향해 걸었다', range:[0,45]},
-  {id:'nt', name:'신약', icon:'🕊', sentence:'복음이 내 안에 심겼다', range:[46,72]},
-  {id:'chrono', name:'연대기', icon:'🕰', sentence:'역사의 흐름 속에서 하나님을 만났다', chrono:true},
-  {id:'pentateuch', name:'오경', icon:'📜', sentence:'율법 아래서 은혜를 배웠다', range:[0,4]},
-  {id:'history', name:'역사서', icon:'🏛', sentence:'왕과 백성의 이야기를 따라 걸었다', range:[5,20]},
-  {id:'wisdom', name:'시서·지혜서', icon:'🎶', sentence:'노래하고, 질문하고, 침묵했다', range:[21,27]},
-  {id:'prophets', name:'예언서', icon:'🔥', sentence:'정의를 외치는 목소리에 귀 기울였다', range:[28,45]},
-  {id:'gospels', name:'복음서', icon:'✝', sentence:'「나를 따르라」는 부름에 응답했다', range:[46,49]}
+  {id:'all', name:'전체 통독', icon:'✝', accent:'#8B1E3F', sentence:'처음부터 끝까지, 말씀이 내 길이 되었다', books:'all'},
+  {id:'ot', name:'구약', icon:'🕯', accent:'#4A5D23', sentence:'약속의 땅을 향해 걸었다', range:[0,45]},
+  {id:'nt', name:'신약', icon:'🕊', accent:'#1E4D7B', sentence:'복음이 내 안에 심겼다', range:[46,72]},
+  {id:'chrono', name:'연대기', icon:'🕰', accent:'#C9A227', sentence:'역사의 흐름 속에서 하느님을 만났다', chrono:true},
+  {id:'pentateuch', name:'오경', icon:'📜', accent:'#6B4F2A', sentence:'율법 아래서 은혜를 배웠다', range:[0,4]},
+  {id:'history', name:'역사서', icon:'🏛', accent:'#5C4B3A', sentence:'왕과 백성의 이야기를 따라 걸었다', range:[5,20]},
+  {id:'wisdom', name:'시서·지혜서', icon:'🎶', accent:'#7A5C1E', sentence:'노래하고, 질문하고, 침묵했다', range:[21,27]},
+  {id:'prophets', name:'예언서', icon:'🔥', accent:'#B33A1A', sentence:'정의를 외치는 목소리에 귀 기울였다', range:[28,45]},
+  {id:'gospels', name:'복음서', icon:'✝', accent:'#172b43', sentence:'예수님의 발자취를 따라 걸었다', range:[46,49]},
+  {id:'epistles', name:'서간·묵시', icon:'✉', accent:'#3D4F6F', sentence:'교회와 함께, 끝까지', range:[50,72]}
 ];
 
 let badgeAwards=jget('badgeAwards_v1',{},isPlainObj);
 let badgeCompleteSnap=jget('badgeCompleteSnap_v1',{},isPlainObj);
+let currentBadgeShare=null;
 
 function isChapterDoneForBadge(bi,ch){
   return !!chapterRead[bi+':'+ch];
@@ -417,8 +419,8 @@ function isBadgeComplete(def){
 function badgeProgress(def){
   let done=0,total=0;
   const addBook=(bi,from,to)=>{
-    const end=to||books[bi][2];
-    const start=from||1;
+    const end=to!=null?to:books[bi][2];
+    const start=from!=null?from:1;
     for(let c=start;c<=end;c++){ total++; if(isChapterDoneForBadge(bi,c)) done++; }
   };
   if(def.books==='all'){ for(let bi=0;bi<books.length;bi++) addBook(bi); }
@@ -431,13 +433,20 @@ function saveBadgeState(){
   store.badgeAwards_v1=JSON.stringify(badgeAwards);
   store.badgeCompleteSnap_v1=JSON.stringify(badgeCompleteSnap);
 }
+function pilgrimageLabel(count){
+  if(!count||count<1) return '';
+  if(count===1) return '첫 순례';
+  if(count===2) return '두 번째 순례';
+  if(count===3) return '세 번째 순례';
+  return count+'번째 순례';
+}
 function awardBadge(def){
   const prev=badgeAwards[def.id]||{count:0};
   const count=(prev.count||0)+1;
   const now=new Date().toISOString();
   badgeAwards[def.id]={count, lastAt:now, firstAt:prev.firstAt||now};
   saveBadgeState();
-  showBadgeModal(def,count);
+  showBadgeModal(def,count,{fresh:true});
 }
 function checkBadgeAwards(){
   const newly=[];
@@ -453,38 +462,80 @@ function checkBadgeAwards(){
   if(newly.length) saveBadgeState();
   return newly;
 }
-function showBadgeModal(def,count){
+function showBadgeModal(def,count,opts){
   const m=$('badgeModal'); if(!m) return;
+  opts=opts||{};
+  currentBadgeShare={def:def, count:count||0};
   if($('badgeModalIcon')) $('badgeModalIcon').textContent=def.icon||'✦';
   if($('badgeModalTitle')) $('badgeModalTitle').textContent=def.name;
   if($('badgeModalSentence')) $('badgeModalSentence').textContent='「'+def.sentence+'」';
-  const times=count>1?(' · '+count+'번째 순례'):' · 첫 순례';
-  if($('badgeModalMeta')) $('badgeModalMeta').textContent='증표를 받았습니다'+times;
+  const prog=badgeProgress(def);
+  const pil=pilgrimageLabel(count);
+  const parts=[];
+  if(opts.fresh) parts.push('증표를 받았습니다');
+  if(pil) parts.push(pil);
+  parts.push('진행 '+prog.pct+'%');
+  if($('badgeModalMeta')) $('badgeModalMeta').textContent=parts.join(' · ');
+  if($('badgeModalBar')) $('badgeModalBar').style.width=Math.min(100,prog.pct)+'%';
+  const seal=$('badgeModalSeal');
+  if(seal){ seal.style.borderColor=def.accent||''; seal.style.boxShadow='0 0 0 6px '+(def.accent||'#C9A227')+'33, 0 8px 28px '+(def.accent||'#C9A227')+'55'; }
   m.classList.remove('hidden');
 }
-function closeBadgeModal(){ const m=$('badgeModal'); if(m) m.classList.add('hidden'); }
+function closeBadgeModal(){ const m=$('badgeModal'); if(m) m.classList.add('hidden'); currentBadgeShare=null; }
+async function shareBadge(){
+  if(!currentBadgeShare) return;
+  const {def,count}=currentBadgeShare;
+  const pil=pilgrimageLabel(count);
+  const text='말씀의 길 · 순례의 증표\\n'+def.name+(pil?' ('+pil+')':'')+'\\n「'+def.sentence+'」';
+  try{
+    if(navigator.share){ await navigator.share({title:def.name, text:text}); return; }
+  }catch(e){ if(e&&e.name==='AbortError') return; }
+  try{
+    await navigator.clipboard.writeText(text);
+    if(typeof toast==='function') toast('증표 문장을 복사했습니다');
+    else alert('증표 문장을 복사했습니다');
+  }catch(e){
+    prompt('아래 문장을 복사하세요', text);
+  }
+}
 function renderBadges(){
   const grid=$('badgeGrid'); if(!grid) return;
   let unlocked=0;
+  const near=[];
   const html=BADGE_DEFS.map(def=>{
     const prog=badgeProgress(def);
     const award=badgeAwards[def.id];
     const has=award&&award.count>0;
     if(has) unlocked++;
     const complete=isBadgeComplete(def);
+    const isNear=!has && prog.pct>=80 && prog.pct<100;
+    if(isNear) near.push({def,prog});
     const countLabel=has?('×'+award.count):'';
-    const sub=has
-      ? (complete?'완료 유지 중':'이전에 완주')
-      : (prog.pct+'% · '+prog.done+'/'+prog.total);
-    return '<button type="button" class="badge-card '+(has?'unlocked':'locked')+'" data-badge="'+def.id+'" onclick="openBadgeDetail(\''+def.id+'\')">'+
+    const line=has
+      ? (complete?pilgrimageLabel(award.count)+' · 유지':'이전 완주 · 다시 걷는 중')
+      : (isNear?'곧 받을 수 있습니다':'아직 걸어보지 않은 길');
+    const cls='badge-card '+(has?'unlocked':'locked')+(isNear?' near':'');
+    return '<button type="button" class="'+cls+'" data-badge="'+def.id+'" onclick="openBadgeDetail(\''+def.id+'\')" style="'+(has&&def.accent?'border-color:'+def.accent+'88':'')+'">'+
       (has?'<span class="badge-count">'+countLabel+'</span>':'')+
-      '<span class="badge-ico" aria-hidden="true">'+(has?def.icon:'🔒')+'</span>'+
+      '<span class="badge-ico" aria-hidden="true">'+(has?def.icon:'·')+'</span>'+
       '<span class="badge-name">'+safe(def.name)+'</span>'+
-      '<span class="small muted">'+sub+'</span>'+
+      '<span class="badge-line">'+line+'</span>'+
+      '<span class="badge-mini-bar" aria-hidden="true"><span style="width:'+prog.pct+'%"></span></span>'+
+      '<span class="small muted">'+prog.pct+'%</span>'+
       '</button>';
   }).join('');
   grid.innerHTML=html;
   if($('badgeSummary')) $('badgeSummary').textContent='획득 '+unlocked+' · 전체 '+BADGE_DEFS.length;
+  const nearBox=$('badgeNear');
+  if(nearBox){
+    if(near.length){
+      nearBox.classList.remove('hidden');
+      nearBox.innerHTML='<b>거의 다 왔습니다</b> · '+near.map(n=>safe(n.def.name)+' '+n.prog.pct+'%').join(' · ');
+    } else {
+      nearBox.classList.add('hidden');
+      nearBox.innerHTML='';
+    }
+  }
 }
 function openBadgeDetail(id){
   const def=BADGE_DEFS.find(b=>b.id===id); if(!def) return;
@@ -492,15 +543,22 @@ function openBadgeDetail(id){
   const prog=badgeProgress(def);
   const complete=isBadgeComplete(def);
   if(award&&award.count){
-    showBadgeModal(def, award.count);
+    showBadgeModal(def, award.count, {fresh:false});
     if($('badgeModalMeta')){
       const d=award.lastAt?new Date(award.lastAt).toLocaleDateString('ko-KR'):'';
-      $('badgeModalMeta').textContent=(d?d+' 기록 · ':'')+award.count+'회 완주 · 진행 '+prog.pct+'%'+(complete?' (유지 중)':'');
+      const parts=[];
+      if(d) parts.push(d+' 기록');
+      parts.push(pilgrimageLabel(award.count));
+      parts.push('진행 '+prog.pct+'%'+(complete?' · 유지 중':''));
+      $('badgeModalMeta').textContent=parts.join(' · ');
     }
   } else {
-    alert(def.name+'\\n\\n「'+def.sentence+'」\\n\\n진행: '+prog.done+' / '+prog.total+' ('+prog.pct+'%)\\n아직 증표를 받지 못했습니다.');
+    showBadgeModal(def, 0, {fresh:false});
+    if($('badgeModalMeta')) $('badgeModalMeta').textContent='진행 '+prog.done+' / '+prog.total+' ('+prog.pct+'%) · 아직 증표 없음';
+    if($('badgeModalSentence')) $('badgeModalSentence').textContent='「'+def.sentence+'」';
   }
 }
+
 
 function view(id,planId){
   if(id==='read') activeReadPlanId=planId||'';

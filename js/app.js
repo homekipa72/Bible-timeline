@@ -335,7 +335,7 @@ if(store.planReadingMigrated_v1!=='1'){const legacyPlan=savedPlans.find(p=>p.id=
 backfillCumulative();
 $('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 $('days').value=days;$('start').value=start;$('ndate').value=new Date().toISOString().slice(0,10);
-$('verseBook').innerHTML=books.map((b,n)=>'<option value="'+n+'">'+b[0]+'</option>').join('');
+try{ refreshReadBookSelect(); }catch(e){ $('verseBook').innerHTML=books.map((b,n)=>'<option value="'+n+'">'+b[0]+'</option>').join(''); }
 let missaItems=[],currentMissaDate='',missaLoaded=false,missaRequestSeq=0;
 function setMissaStatus(message,isError=false){const el=$('missaStatus');el.textContent=message;el.classList.toggle('error',isError);$('missaRetry').classList.toggle('hidden',!isError)}
 function renderMissaNavigation(){
@@ -389,7 +389,7 @@ function view(id,planId){
   if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}renderRangePreview();renderSavedPlans();syncPeriodFromAuto();preview();}
   if(id==='notes'){renderNotes();try{renderOneLine();}catch(e){}}
   if(id==='stats')stats();
-  if(id==='read'){loadChapter(false);renderReadPlanPreview();updateMarkButtons();}
+  if(id==='read'){refreshReadBookSelect(true);refreshReadChapterSelect(selectedChapter);loadChapter(false);renderReadPlanPreview();updateMarkButtons();}
   window.scrollTo(0,0);
 }
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>view(b.dataset.v));
@@ -404,9 +404,97 @@ function applyTextStyle(){let el=$('bibleText');el.style.fontFamily=$('fontFamil
   setSel('lineHeight',store.lineHeight||'2.05','2.05');
   applyTextStyle();
 })();
-function selectBook(index){selectedBook=Math.max(0,Math.min(books.length-1,index));$('verseBook').value=selectedBook;let count=books[selectedBook][2],u=unit(selectedBook);$('chapterUnitLabel').childNodes[0].textContent=u+' ';$('verseChapter').innerHTML=Array.from({length:count},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+u+'</option>').join('');if($('btnPrevCh')){$('btnPrevCh').textContent='이전 '+u;$('btnNextCh').textContent='다음 '+u;$('btnMarkCh').textContent='이 '+u+' 완료'}selectedChapter=1;$('verseChapter').value='1';loadChapter(false)}
+
+function exitReading(target){
+  activeReadPlanId='';
+  view(target==='plan'?'plan':'home');
+}
+function getActiveReadPlan(){
+  if(!activeReadPlanId) return null;
+  return savedPlans.find(x=>x.id===activeReadPlanId)||null;
+}
+function getActiveReadSeq(){
+  const p=getActiveReadPlan();
+  if(!p) return null;
+  try{ return buildSeqForPlan(p); }catch(e){ return null; }
+}
+function booksInReadScope(){
+  const seq=getActiveReadSeq();
+  if(!seq||!seq.length) return books.map((_,i)=>i);
+  return [...new Set(seq.map(it=>+it.book))].filter(bi=>bi>=0&&bi<books.length).sort((a,b)=>a-b);
+}
+function chaptersInReadScope(bi){
+  const seq=getActiveReadSeq();
+  if(!seq||!seq.length) return Array.from({length:books[bi][2]},(_,i)=>i+1);
+  const ch=[...new Set(seq.filter(it=>+it.book===+bi).map(it=>+it.chapter))].filter(c=>c>=1).sort((a,b)=>a-b);
+  return ch.length?ch:Array.from({length:books[bi][2]},(_,i)=>i+1);
+}
+function refreshReadBookSelect(keepSelection){
+  const el=$('verseBook'); if(!el) return;
+  const scope=booksInReadScope();
+  const prev=keepSelection?selectedBook:+el.value;
+  el.innerHTML=scope.map(n=>'<option value="'+n+'">'+books[n][0]+'</option>').join('');
+  let next=scope.includes(prev)?prev:(scope[0]??0);
+  selectedBook=next;
+  el.value=String(next);
+  const hint=$('readScopeHint');
+  if(hint){
+    const p=getActiveReadPlan();
+    hint.textContent=p
+      ?('「'+p.name+'」 계획 범위의 책·장만 선택할 수 있습니다.')
+      :'통독 계획에서 성경 읽기를 시작하면 해당 계획 범위만 표시됩니다.';
+  }
+}
+function refreshReadChapterSelect(preferCh){
+  const countList=chaptersInReadScope(selectedBook);
+  const u=unit(selectedBook);
+  if($('chapterUnitLabel')) $('chapterUnitLabel').childNodes[0].textContent=u+' ';
+  $('verseChapter').innerHTML=countList.map(c=>'<option value="'+c+'">'+c+u+'</option>').join('');
+  let ch=preferCh!=null?+preferCh:selectedChapter;
+  if(!countList.includes(ch)) ch=countList[0]||1;
+  selectedChapter=ch;
+  $('verseChapter').value=String(ch);
+  if($('btnPrevCh')){$('btnPrevCh').textContent='이전 '+u;$('btnNextCh').textContent='다음 '+u;$('btnMarkCh').textContent='이 '+u+' 완료'}
+}
+
+function selectBook(index){
+  const scope=booksInReadScope();
+  let bi=+index;
+  if(!scope.includes(bi)) bi=scope[0]??0;
+  selectedBook=bi;
+  if($('verseBook')) $('verseBook').value=String(bi);
+  refreshReadChapterSelect(chaptersInReadScope(bi)[0]);
+  loadChapter(false);
+}
+
 function selectChapter(ch){selectedChapter=+ch;rememberLastRead(selectedBook,selectedChapter);loadChapter(false)}
-function moveChapter(delta){let c=selectedChapter+delta,b=selectedBook;if(c<1){if(b===0)return;b--;c=books[b][2]}else if(c>books[b][2]){if(b===books.length-1)return;b++;c=1}selectedBook=b;selectedChapter=c;$('verseBook').value=String(b);$('verseChapter').innerHTML=Array.from({length:books[b][2]},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+unit(b)+'</option>').join('');$('verseChapter').value=String(c);if($('btnPrevCh')){$('btnPrevCh').textContent='이전 '+unit(b);$('btnNextCh').textContent='다음 '+unit(b);$('btnMarkCh').textContent='이 '+unit(b)+' 완료'}if($('chapterUnitLabel'))$('chapterUnitLabel').childNodes[0].textContent=unit(b)+' ';rememberLastRead(b,c);loadChapter(false)}
+function moveChapter(delta){
+  const seq=getActiveReadSeq();
+  if(seq&&seq.length){
+    let idx=seq.findIndex(it=>+it.book===+selectedBook&&+it.chapter===+selectedChapter);
+    if(idx<0){
+      // nearest
+      idx=seq.findIndex(it=>+it.book===+selectedBook);
+      if(idx<0) idx=0;
+    }
+    const next=idx+delta;
+    if(next<0||next>=seq.length) return;
+    const it=seq[next];
+    selectedBook=+it.book; selectedChapter=+it.chapter;
+    refreshReadBookSelect(true);
+    refreshReadChapterSelect(selectedChapter);
+    rememberLastRead(selectedBook,selectedChapter);
+    loadChapter(false);
+    return;
+  }
+  let c=selectedChapter+delta,b=selectedBook;
+  if(c<1){if(b===0)return;b--;c=books[b][2]}
+  else if(c>books[b][2]){if(b===books.length-1)return;b++;c=1}
+  selectedBook=b;selectedChapter=c;
+  refreshReadBookSelect(true);
+  refreshReadChapterSelect(c);
+  rememberLastRead(b,c);loadChapter(false);
+}
 function verseKey(b,c){return b+':'+c}
 function saveVerseData(){store.verseRead_v1=JSON.stringify(verseRead);store.chapterRead_v1=JSON.stringify(chapterRead);if(periodChart||testamentChart||bookChart)updateCharts();if($('todayList'))renderTodayList()}
 function htmlToText(root){let out='';const blocks=new Set(['ADDRESS','ARTICLE','ASIDE','BLOCKQUOTE','BR','DD','DIV','DL','DT','H1','H2','H3','H4','LI','OL','P','SECTION','SPAN','TABLE','TR','UL']);function walk(node){if(node.nodeType===3){out+=node.nodeValue;return}if(node.nodeType!==1)return;const tag=node.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT')return;if(blocks.has(tag))out+='\n';for(const child of node.childNodes)walk(child);if(blocks.has(tag))out+='\n'}walk(root);return out.replace(/\n{3,}/g,'\n\n')}
@@ -517,10 +605,15 @@ function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
 function dailyRange(){let elapsed=Math.max(1,Math.floor((Date.now()-new Date(start+'T00:00:00'))/86400000)+1),day=Math.min(days,elapsed),total=totalChapters(),a=Math.floor((day-1)*total/days),z=Math.max(a+1,Math.floor(day*total/days));return{day,a,z}}
 function openReading(bi, ch, planId){
-  if(planId) setActivePlan(planId);
+  if(planId){ setActivePlan(planId); activeReadPlanId=planId; }
   view('read',planId||'');
-  selectBook(+bi);
-  selectChapter(+ch);
+  refreshReadBookSelect(false);
+  selectedBook=+bi;
+  refreshReadBookSelect(true);
+  refreshReadChapterSelect(+ch);
+  rememberLastRead(selectedBook,selectedChapter);
+  loadChapter(false);
+  try{ renderReadPlanPreview(); }catch(e){}
 }
 function renderTodayList(){
   const el=$('todayList');
@@ -587,29 +680,35 @@ function openPlanReading(planId, mode){
   setActivePlan(planId);
   activeReadPlanId=planId;
   const p=savedPlans.find(x=>x.id===planId);
-  if(!p){ view('read'); return; }
+  view('read',planId);
+  refreshReadBookSelect(false);
+  if(!p){ renderReadPlanPreview(); return; }
+  let bi=null, ch=null;
   if(mode==='today'){
     const items=todayItemsForPlan(p);
-    if(items.length){
-      selectBook(items[0].book);
-      selectChapter(items[0].chapter);
-    } else {
+    if(items.length){ bi=items[0].book; ch=items[0].chapter; }
+    else {
       const lr=lastReadByPlan[planId];
-      if(lr){ selectBook(lr.book); selectChapter(lr.chapter); }
+      if(lr){ bi=lr.book; ch=lr.chapter; }
     }
   } else {
     const lr=lastReadByPlan[planId];
-    if(lr){ selectBook(lr.book); selectChapter(lr.chapter); }
+    if(lr){ bi=lr.book; ch=lr.chapter; }
     else {
       const items=todayItemsForPlan(p);
-      if(items.length){ selectBook(items[0].book); selectChapter(items[0].chapter); }
+      if(items.length){ bi=items[0].book; ch=items[0].chapter; }
       else {
         const seq=buildSeqForPlan(p);
-        if(seq.length){ selectBook(seq[0].book); selectChapter(seq[0].chapter); }
+        if(seq.length){ bi=seq[0].book; ch=seq[0].chapter; }
       }
     }
   }
-  view('read',planId);
+  if(bi==null){ const scope=booksInReadScope(); bi=scope[0]??0; ch=chaptersInReadScope(bi)[0]||1; }
+  selectedBook=+bi;
+  refreshReadBookSelect(true);
+  refreshReadChapterSelect(+ch);
+  rememberLastRead(selectedBook,selectedChapter);
+  loadChapter(false);
   renderReadPlanPreview();
 }
 function resumeLastRead(){

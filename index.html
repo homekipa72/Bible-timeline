@@ -29,6 +29,7 @@
 <main id="main">
 <section id="home"><div class="eyebrow">DAILY SCRIPTURE JOURNEY</div><div class="h1">오늘의 통독</div>
 <p class="muted" id="today"></p>
+<div class="card" id="homeTodayCta"></div>
 <div class="card" id="homePlanShortcut">
 <div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
   <div>
@@ -100,12 +101,19 @@
   <button type="button" class="alt" onclick="openCard({type:'verse'})">카드</button>
   <button type="button" class="alt" onclick="toggleCopyMode(false)">닫기</button>
 </div>
+<div class="read-typebar" id="readTypeBar">
+  <button type="button" class="alt" onclick="nudgeFont(-1)" aria-label="글자 작게">A−</button>
+  <button type="button" class="alt" onclick="nudgeFont(1)" aria-label="글자 크게">A+</button>
+  <button type="button" class="alt" onclick="cycleLineHeight()" aria-label="줄 간격">줄간격</button>
+  <button type="button" class="alt" id="focusModeBtnDock" onclick="toggleFocusMode()">집중</button>
+</div>
 <div class="read-dock" id="readDock">
   <button type="button" class="alt" onclick="moveChapter(-1)">이전</button>
   <button type="button" id="btnMarkChDock" onclick="markChapter()">완료</button>
   <button type="button" class="alt" onclick="moveChapter(1)">다음</button>
 </div>
-<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><label>글자 크기 <select id="fontSize" onchange="applyTextStyle()"><option value="14">14</option><option value="16">16</option><option value="18" selected>18</option><option value="20">20</option><option value="22">22</option><option value="24">24</option><option value="26">26</option><option value="28">28</option><option value="32">32</option></select> px</label><label>글꼴 <select id="fontFamily" onchange="applyTextStyle()"><option value="'Noto Serif KR',serif">명조체</option><option value="'Noto Sans KR',sans-serif">고딕체</option><option value="serif">기본 명조</option><option value="sans-serif">기본 고딕</option></select></label><label>줄 간격 <select id="lineHeight" onchange="applyTextStyle()"><option value="1.6">좁게</option><option value="2.05" selected>보통</option><option value="2.4">넓게</option><option value="2.8">아주 넓게</option></select></label><label><input type="checkbox" id="hideNotes" onchange="toggleNotes()"> 각주 번호 숨기기</label></div></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="bibleText" class="bible-verses"><p class="muted">성경의 책과 장을 선택하면 본문이 표시됩니다.</p></div><p class="small">절을 누르면 읽음 표시가 저장됩니다. 다시 누르면 표시가 해제됩니다. 본문은 장별로 이 기기의 브라우저에 보관됩니다.</p></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><label>글자 크기 <select id="fontSize" onchange="applyTextStyle()"><option value="14">14</option><option value="16">16</option><option value="18" selected>18</option><option value="20">20</option><option value="22">22</option><option value="24">24</option><option value="26">26</option><option value="28">28</option><option value="32">32</option></select> px</label><label>글꼴 <select id="fontFamily" onchange="applyTextStyle()"><option value="'Noto Serif KR',serif">명조체</option><option value="'Noto Sans KR',sans-serif">고딕체</option><option value="serif">기본 명조</option><option value="sans-serif">기본 고딕</option></select></label><label>줄 간격 <select id="lineHeight" onchange="applyTextStyle()"><option value="1.6">좁게</option><option value="2.05" selected>보통</option><option value="2.4">넓게</option><option value="2.8">아주 넓게</option></select></label><label><input type="checkbox" id="hideNotes" onchange="toggleNotes()"> 각주 번호 숨기기</label></div></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="notice hidden" style="margin:10px 0"></div>
+<div id="bibleText" class="bible-verses"><p class="muted">성경의 책과 장을 선택하면 본문이 표시됩니다.</p></div><p class="small">절을 누르면 읽음 표시가 저장됩니다. 다시 누르면 표시가 해제됩니다. 본문은 장별로 이 기기의 브라우저에 보관됩니다.</p></div>
 <div class="reader"><div></div><div class="card"><b>읽기 메모</b><textarea id="quick" placeholder="읽으면서 떠오른 생각"></textarea><button style="margin-top:8px" onclick="quickNote()">메모 저장</button></div></div>
 <p class="small">성경 본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a>. 앱 내 본문 저장 및 이용은 승인된 사용 범위에 따라 운영합니다.</p></section>
 <section id="plan" class="hidden"><div class="eyebrow">READING PLAN</div><div class="h1">나만의 통독 계획</div>
@@ -248,6 +256,10 @@
     <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
       <h3 style="margin:0">나의 증표함</h3>
       <span class="small muted" id="badgeSummary">획득 0 · 전체 12</span>
+    </div>
+    <div class="row" id="badgeTabs" style="margin-top:12px;gap:6px;flex-wrap:wrap">
+      <button type="button" class="alt chip on" data-badge-tab="range" onclick="setBadgeTab('range')">범위 증표</button>
+      <button type="button" class="alt chip" data-badge-tab="book" onclick="setBadgeTab('book')">권별 증표 (73)</button>
     </div>
     <div id="badgeNear" class="badge-near hidden" style="margin-top:12px"></div>
     <div id="badgeGrid" class="badge-grid" style="margin-top:14px"></div>

@@ -256,3 +256,19 @@ html:not([data-theme="light"]) .parchment-card{
   60%{transform:scale(1.05)}
   100%{transform:scale(1);opacity:1}
 }
+
+/* Focus reading mode */
+body.focus-read #readPlanBar,
+body.focus-read .card:has(#verseBook),
+body.focus-read #chapterGrid,
+body.focus-read #chapterProgress{display:none !important}
+body.focus-read #bibleText{font-size:inherit}
+.read-typebar{
+  position:sticky;bottom:58px;z-index:34;display:flex;gap:6px;justify-content:center;
+  padding:6px;margin:0 auto 6px;width:max-content;max-width:96%;
+  background:color-mix(in srgb, var(--surface) 92%, transparent);
+  border:1px solid var(--line);border-radius:999px;backdrop-filter:blur(8px);
+}
+body:not(.read-mode) .read-typebar{display:none}
+.badge-card.badge-book{min-height:120px;padding:12px 8px}
+.badge-card.badge-book .badge-name{font-size:12px}

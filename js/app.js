@@ -402,6 +402,26 @@ const BADGE_DEFS=[
     sentence:'보라, 내가 모든 것을 새롭게 만든다', ref:'묵시 21,5', range:[72,72]}
 ];
 
+
+const BOOK_BADGE_DEFS=(function(){
+  const icons=['📖','📜','🕯','✝','🕊','⭐','🔥','✉','🏛','🎶'];
+  return books.map((b,i)=>({
+    id:'book_'+i,
+    name:b[0],
+    icon:icons[i%icons.length],
+    accent: i<46 ? '#4A5D23' : '#1E4D7B',
+    sentence:b[0]+' 전권을 읽으며 말씀을 마음에 새겼다',
+    ref:b[0],
+    bookIndex:i,
+    group:'book'
+  }));
+})();
+function allBadgeDefs(){ return BADGE_DEFS.concat(BOOK_BADGE_DEFS); }
+function badgesForTab(tab){
+  if(tab==='book') return BOOK_BADGE_DEFS;
+  return BADGE_DEFS;
+}
+let badgeTab=store.badgeTab||'range';
 let badgeAwards=jget('badgeAwards_v1',{},isPlainObj);
 let badgeCompleteSnap=jget('badgeCompleteSnap_v1',{},isPlainObj);
 let currentBadgeShare=null;
@@ -427,6 +447,7 @@ function chronoFullyRead(){
 function isBadgeComplete(def){
   if(def.books==='all') return booksFullyRead(0,books.length-1);
   if(def.chrono) return chronoFullyRead();
+  if(typeof def.bookIndex==='number') return booksFullyRead(def.bookIndex, def.bookIndex);
   if(def.range) return booksFullyRead(def.range[0],def.range[1]);
   return false;
 }
@@ -439,6 +460,7 @@ function badgeProgress(def){
   };
   if(def.books==='all'){ for(let bi=0;bi<books.length;bi++) addBook(bi); }
   else if(def.chrono && chronoRanges){ for(const r of chronoRanges) addBook(r[0],r[1],r[2]); }
+  else if(typeof def.bookIndex==='number'){ addBook(def.bookIndex); }
   else if(def.range){ for(let bi=def.range[0];bi<=def.range[1];bi++) addBook(bi); }
   const pct=total?Math.round(done/total*100):0;
   return {done,total,pct};
@@ -464,7 +486,7 @@ function awardBadge(def){
 }
 function checkBadgeAwards(){
   const newly=[];
-  for(const def of BADGE_DEFS){
+  for(const def of allBadgeDefs()){
     const complete=isBadgeComplete(def);
     const was=!!badgeCompleteSnap[def.id];
     if(complete && !was){
@@ -512,11 +534,22 @@ async function shareBadge(){
     prompt('아래 문장을 복사하세요', text);
   }
 }
+function setBadgeTab(tab){
+  badgeTab=tab==='book'?'book':'range';
+  store.badgeTab=badgeTab;
+  renderBadges();
+}
 function renderBadges(){
   const grid=$('badgeGrid'); if(!grid) return;
-  let unlocked=0;
+  const list=badgesForTab(badgeTab);
+  let unlocked=0, total=list.length;
   const near=[];
-  const html=BADGE_DEFS.map(def=>{
+  // tab UI state
+  document.querySelectorAll('[data-badge-tab]').forEach(btn=>{
+    const on=btn.getAttribute('data-badge-tab')===(badgeTab==='book'?'book':'range');
+    btn.classList.toggle('on', on);
+  });
+  const html=list.map(def=>{
     const prog=badgeProgress(def);
     const award=badgeAwards[def.id];
     const has=award&&award.count>0;
@@ -528,7 +561,7 @@ function renderBadges(){
     const line=has
       ? (complete?pilgrimageLabel(award.count)+' · 유지':'이전 완주 · 다시 걷는 중')
       : (isNear?'곧 받을 수 있습니다':'아직 걸어보지 않은 길');
-    const cls='badge-card '+(has?'unlocked':'locked')+(isNear?' near':'');
+    const cls='badge-card '+(has?'unlocked':'locked')+(isNear?' near':'')+(def.bookIndex!=null?' badge-book':'');
     return '<button type="button" class="'+cls+'" data-badge="'+def.id+'" onclick="openBadgeDetail(\''+def.id+'\')" style="'+(has&&def.accent?'border-color:'+def.accent+'88':'')+'">'+
       (has?'<span class="badge-count">'+countLabel+'</span>':'')+
       '<span class="badge-ico" aria-hidden="true">'+(has?def.icon:'·')+'</span>'+
@@ -538,13 +571,14 @@ function renderBadges(){
       '<span class="small muted">'+prog.pct+'%</span>'+
       '</button>';
   }).join('');
-  grid.innerHTML=html;
-  if($('badgeSummary')) $('badgeSummary').textContent='획득 '+unlocked+' · 전체 '+BADGE_DEFS.length;
+  grid.innerHTML=html||'<p class="muted small">표시할 증표가 없습니다.</p>';
+  if($('badgeSummary')) $('badgeSummary').textContent='획득 '+unlocked+' · 전체 '+total+(badgeTab==='book'?' (권별)':' (범위)');
   const nearBox=$('badgeNear');
   if(nearBox){
     if(near.length){
       nearBox.classList.remove('hidden');
-      nearBox.innerHTML='<b>거의 다 왔습니다</b> · '+near.map(n=>safe(n.def.name)+' '+n.prog.pct+'%').join(' · ');
+      const show=near.slice(0,5).map(n=>safe(n.def.name)+' '+n.prog.pct+'%').join(' · ');
+      nearBox.innerHTML='<b>거의 다 왔습니다</b> · '+show+(near.length>5?' 외 '+(near.length-5)+'개':'');
     } else {
       nearBox.classList.add('hidden');
       nearBox.innerHTML='';
@@ -552,7 +586,7 @@ function renderBadges(){
   }
 }
 function openBadgeDetail(id){
-  const def=BADGE_DEFS.find(b=>b.id===id); if(!def) return;
+  const def=allBadgeDefs().find(b=>b.id===id); if(!def) return;
   const award=badgeAwards[id];
   const prog=badgeProgress(def);
   const complete=isBadgeComplete(def);
@@ -801,6 +835,58 @@ function updateMarkButtons(){
   if($('btnMarkCh')) $('btnMarkCh').textContent=label;
   if($('btnMarkChDock')) $('btnMarkChDock').textContent=short;
 }
+
+let focusMode=false;
+function toggleFocusMode(force){
+  focusMode=typeof force==='boolean'?force:!focusMode;
+  document.body.classList.toggle('focus-read', focusMode);
+  const btn=$('focusModeBtn'), btn2=$('focusModeBtnDock');
+  if(btn) btn.textContent=focusMode?'선택 보이기':'본문 집중';
+  if(btn2) btn2.textContent=focusMode?'전체':'집중';
+}
+function nudgeFont(dir){
+  const sel=$('fontSize'); if(!sel) return;
+  const opts=[...sel.options].map(o=>+o.value);
+  let i=opts.indexOf(+sel.value);
+  if(i<0) i=opts.indexOf(18);
+  i=Math.max(0, Math.min(opts.length-1, i+dir));
+  sel.value=String(opts[i]);
+  applyTextStyle();
+  if(typeof toast==='function') toast('글자 '+opts[i]+'px');
+}
+function cycleLineHeight(){
+  const sel=$('lineHeight'); if(!sel) return;
+  const opts=[...sel.options].map(o=>o.value);
+  let i=opts.indexOf(sel.value);
+  i=(i+1)%opts.length;
+  sel.value=opts[i];
+  applyTextStyle();
+  if(typeof toast==='function') toast('줄 간격: '+sel.selectedOptions[0].textContent);
+}
+function afterChapterMarked(done){
+  if(!done) return;
+  const seq=getActiveReadSeq&&getActiveReadSeq();
+  let nextLabel='';
+  if(seq&&seq.length){
+    const idx=seq.findIndex(it=>+it.book===+selectedBook&&+it.chapter===+selectedChapter);
+    if(idx>=0&&idx<seq.length-1){
+      const n=seq[idx+1];
+      nextLabel=chLabel(n.book,n.chapter);
+    }
+  }
+  const msg='이 '+unit(selectedBook)+'을 완료했습니다.'+(nextLabel?' 다음: '+nextLabel:'');
+  if(typeof toast==='function') toast(msg);
+  // soft prompt once
+  const bar=$('chapterCompleteBar');
+  if(bar){
+    bar.classList.remove('hidden');
+    bar.innerHTML='<span class="small">'+safe(msg)+'</span> '+
+      (nextLabel?'<button type="button" onclick="moveChapter(1)">다음 장</button>':'')+
+      ' <button type="button" class="alt" onclick="document.getElementById(\'quickReflect\')&&document.getElementById(\'quickReflect\').focus()">한 줄 묵상</button>'+
+      ' <button type="button" class="alt" onclick="this.parentElement.classList.add(\'hidden\')">닫기</button>';
+  }
+}
+
 function markChapter(){
   const key=verseKey(selectedBook,selectedChapter);
   if(activeReadPlanId){
@@ -820,7 +906,13 @@ function markChapter(){
   updateMarkButtons();
   if($("homePlanList")) renderHomePlans();
   try{ checkBadgeAwards(); if($("badgeGrid")) renderBadges(); }catch(e){}
+  try{
+    const key=verseKey(selectedBook,selectedChapter);
+    const nowDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];
+    afterChapterMarked(nowDone);
+  }catch(e){}
 }
+
 function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if(!confirm(chLabel(selectedBook,selectedChapter)+'의 읽음 기록을 지울까요?'))return;if(activeReadPlanId)setPlanChapterDone(activeReadPlanId,key,false,[]);else{delete verseRead[key];delete chapterRead[key];saveVerseData()}renderChapter()}
 function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
@@ -853,8 +945,8 @@ function renderTodayList(){
       html+='<p class="small muted">오늘 배정 분량이 없습니다.</p>';
     } else {
       html+=items.map(it=>{
-        const bg=it.done?'#e8f5e9':'#fff';
-        const border=it.done?'#a5d6a7':'var(--line)';
+        const bg=it.done?'var(--ok-bg)':'var(--card)';
+        const border=it.done?'var(--ok-border)':'var(--line)';
         return '<button type="button" data-plan-id="'+safe(it.planId)+'" onclick="openReading('+it.book+','+it.chapter+',this.dataset.planId)" style="text-align:left;width:100%;margin:4px 0;padding:10px 12px;border-radius:8px;border:1px solid '+border+';background:'+bg+';cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span><b>'+it.label+'</b></span><span class="small" style="color:'+(it.done?'var(--ok-text)':'var(--muted)')+'">'+(it.done?'완료':'미완료')+'</span></button>';
       }).join('');
     }
@@ -891,9 +983,44 @@ function renderHomePlans(){
       '</div></div>';
   }).join('');
 }
+
+function renderHomeTodayCta(){
+  const el=$('homeTodayCta'); if(!el) return;
+  if(!savedPlans.length){
+    el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+      '<div><b style="color:var(--navy)">오늘 시작할 통독</b><p class="small muted" style="margin:4px 0 0">아직 저장된 계획이 없습니다.</p></div>'+
+      '<button type="button" onclick="view(\'plan\')">계획 만들기</button></div>';
+    return;
+  }
+  // pick plan with incomplete today items, else active, else first
+  let pick=null, items=[];
+  const active=getActivePlan&&getActivePlan();
+  const order=active?[active,...savedPlans.filter(p=>p.id!==active.id)]:savedPlans.slice();
+  for(const p of order){
+    const its=todayItemsForPlan(p).filter(x=>!x.done);
+    if(its.length){ pick=p; items=its; break; }
+  }
+  if(!pick){
+    pick=active||savedPlans[0];
+    items=todayItemsForPlan(pick);
+    const allDone=items.length && items.every(x=>x.done);
+    el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+      '<div><b style="color:var(--navy)">오늘의 통독</b><p class="small muted" style="margin:4px 0 0">'+safe(pick.name)+(allDone?' · 오늘 분량 완료':' · 오늘 배정 없음')+'</p></div>'+
+      '<button type="button" onclick="openPlanReading(\''+safe(pick.id)+'\',\'last\')">이어서 읽기</button></div>';
+    return;
+  }
+  const first=items[0];
+  el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
+    '<div><b style="color:var(--navy)">오늘 할 일</b>'+
+    '<p class="small" style="margin:4px 0 0"><b>'+safe(first.label)+'</b> · '+safe(pick.name)+
+    (items.length>1?' <span class="muted">외 '+(items.length-1)+'개</span>':'')+'</p></div>'+
+    '<button type="button" data-plan-id="'+safe(pick.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">지금 읽기</button></div>';
+}
+
 function dashboard(){
   const t=$('today');
   if(t) t.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  try{ renderHomeTodayCta(); }catch(e){}
   renderHomePlans();
   try{ renderOneLine(); }catch(e){}
 }
@@ -987,8 +1114,8 @@ function renderReadPlanPreview(){
       if(!planChapterDone(p.id,verseKey(seq[i].book,seq[i].chapter))) allDone=false;
     }
     const isToday=d===cur;
-    const bg=allDone&&any?'#e8f5e9':(isToday?'#fff8e7':'#f5f2eb');
-    const border=allDone&&any?'#a5d6a7':(isToday?'var(--gold)':'var(--line)');
+    const bg=allDone&&any?'var(--ok-bg)':(isToday?'var(--today-bg)':'var(--soft-2)');
+    const border=allDone&&any?'var(--ok-border)':(isToday?'var(--gold)':'var(--line)');
     dayHtml+='<span style="padding:4px 8px;border-radius:6px;border:1px solid '+border+';background:'+bg+';font-size:12px">'+d+'일'+(allDone&&any?' ✓':'')+(isToday?' ·오늘':'')+'</span>';
   }
   dayHtml+='</div>';
@@ -1010,7 +1137,7 @@ function renderReadPlanPreview(){
   let bookHtml='<details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:600">책별 진도</summary><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:8px">';
   for(const [bi,o] of [...byBook.entries()].sort((a,b)=>a[0]-b[0])){
     const done=o.done>=o.total;
-    bookHtml+='<div style="padding:8px;border-radius:8px;border:1px solid '+(done?'#a5d6a7':'var(--line)')+';background:'+(done?'#e8f5e9':'#faf8f3')+';font-size:12px"><b>'+safe(books[bi][0])+'</b><div class="muted">'+o.done+'/'+o.total+(done?' · 완료':' · 미완료')+'</div></div>';
+    bookHtml+='<div style="padding:8px;border-radius:8px;border:1px solid '+(done?'var(--ok-border)':'var(--line)')+';background:'+(done?'var(--ok-bg)':'var(--soft)')+';font-size:12px"><b>'+safe(books[bi][0])+'</b><div class="muted">'+o.done+'/'+o.total+(done?' · 완료':' · 미완료')+'</div></div>';
   }
   bookHtml+='</div></details>';
   // 오늘 분량

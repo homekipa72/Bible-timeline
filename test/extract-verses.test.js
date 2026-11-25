@@ -25,4 +25,16 @@ assert.equal(verses2[0].n, 1);
 // missing heading
 assert.throws(() => extractVersesFromHtml('<html><body>no heading</body></html>', { bookName: '창세기', chapter: 1 }));
 
-console.log('extractVerses tests: OK (' + verses.length + ' structured, ' + verses2.length + ' plain)');
+
+// variant structure (d-flex / verse-text)
+const html3 = fs.readFileSync(path.join(fixtures, 'bible_contents_variant.html'), 'utf8');
+const verses3 = extractVersesFromHtml(html3, { bookName: '요한 복음서', chapter: 3 });
+assert.equal(verses3.length, 2);
+assert.equal(verses3[0].n, 16);
+assert.match(verses3[0].text, /사랑하신/);
+
+// empty / broken
+assert.throws(() => extractVersesFromHtml('<div id="bibleContents"></div>', { bookName: '창세기', chapter: 1 }));
+
+console.log('extractVerses tests: OK (' + verses.length + ' structured, ' + verses2.length + ' plain, ' + verses3.length + ' variant)');
+

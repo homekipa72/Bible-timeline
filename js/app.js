@@ -1,122 +1,5 @@
-// ===== 안전한 저장소 래퍼 =====
-// 사생활 보호 모드·저장 공간 부족·손상된 데이터가 있어도 앱이 멈추지 않도록
-// localStorage 접근을 모두 이 래퍼(store)로 처리합니다. 저장이 막히면 이 화면에서만 임시 보관합니다.
-const store=(function(){
-  const mem=Object.create(null);
-  let real=null,warned=false;
-  try{ real=window.localStorage; real.setItem('__mg_probe','1'); real.removeItem('__mg_probe'); }catch(e){ real=null; }
-  function warn(msg){ if(warned)return; warned=true; try{ if(typeof toast==='function')toast(msg); }catch(e){} }
-  if(!real) setTimeout(()=>warn('이 브라우저에서는 저장이 막혀 있어, 화면을 닫으면 기록이 사라집니다. 백업을 내려받아 주세요.'),1500);
-  const api={
-    getItem(k){ k=String(k); if(k in mem)return mem[k]; if(real){ try{ return real.getItem(k); }catch(e){} } return null; },
-    setItem(k,v){
-      k=String(k); v=String(v);
-      if(real){ try{ real.setItem(k,v); delete mem[k]; return true; }catch(e){ warn('저장 공간이 부족하거나 저장할 수 없습니다. 통독 기록 탭에서 백업을 내려받아 주세요.'); } }
-      mem[k]=v; return false;
-    },
-    removeItem(k){ k=String(k); delete mem[k]; if(real){ try{ real.removeItem(k); }catch(e){} } }
-  };
-  return new Proxy(api,{
-    get(t,p){ if(typeof p==='symbol')return undefined; if(p in api)return api[p]; const v=api.getItem(p); return v===null?undefined:v; },
-    set(t,p,v){ api.setItem(p,v); return true; },
-    deleteProperty(t,p){ api.removeItem(p); return true; },
-    has(t,p){ return (p in api)||api.getItem(p)!==null; }
-  });
-})();
-function isPlainObj(v){ return !!v&&typeof v==='object'&&!Array.isArray(v); }
-function systemPrefersDark(){ try{ return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){ return false; } }
-function resolveTheme(pref){
-  if(pref==='dark'||pref==='light') return pref;
-  return systemPrefersDark()?'dark':'light';
-}
-function applyTheme(pref){
-  const mode=pref==null?(store.themePref||'system'):pref;
-  if(pref!=null) store.themePref=mode;
-  const resolved=resolveTheme(mode==='system'?null:mode);
-  if(mode==='system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', mode);
-  const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', resolved==='dark'?'#0f141b':'#172b43');
-  const btn=$('themeToggle');
-  if(btn){
-    const label=mode==='dark'?'라이트 모드':(mode==='light'?'시스템 테마':'다크 모드');
-    btn.textContent=label;
-    btn.setAttribute('aria-pressed', mode==='dark'?'true':'false');
-    btn.title='표시 테마: '+(mode==='system'?'시스템':mode==='dark'?'다크':'라이트');
-  }
-}
-function toggleTheme(){
-  const cur=store.themePref||'system';
-  const next=cur==='system'?'dark':(cur==='dark'?'light':'system');
-  applyTheme(next);
-  try{ toast(next==='dark'?'다크 모드':(next==='light'?'라이트 모드':'시스템 테마')); }catch(e){}
-}
-// 저장된 JSON을 읽습니다. 없거나·손상되었거나·형태가 다르면 기본값을 돌려주고, 손상본은 복구용으로 따로 남깁니다.
-function jget(key,fallback,valid){
-  let raw=null;
-  try{
-    raw=store.getItem(key);
-    if(raw==null||raw==='')return fallback;
-    const v=JSON.parse(raw);
-    if(valid&&!valid(v))throw new Error('unexpected shape');
-    return v;
-  }catch(e){
-    try{ if(raw)store.setItem(key+'__corrupt',String(raw).slice(0,200000)); }catch(_){}
-    return fallback;
-  }
-}
-const books=[
-["창세기",9,50,"Gn"],["탈출기",80,40,"Ex"],["레위기",137,27,"Lv"],["민수기",178,36,"Nm"],["신명기",235,34,"Dt"],["여호수아기",286,24,"Jos"],["판관기",320,21,"Jgs"],["룻기",355,4,"Ru"],["사무엘기 상권",361,31,"1Sm"],["사무엘기 하권",407,24,"2Sm"],["열왕기 상권",446,22,"1Kgs"],["열왕기 하권",490,25,"2Kgs"],["역대기 상권",532,29,"1Chr"],["역대기 하권",571,36,"2Chr"],["에즈라기",617,10,"Ezr"],["느헤미야기",632,13,"Neh"],["토빗기",652,14,"Tb"],["유딧기",670,16,"Jdt"],["에스테르기",691,10,"Est"],["마카베오기 상권",708,16,"1Mc"],["마카베오기 하권",750,15,"2Mc"],["욥기",781,42,"Jb"],["시편",820,150,"Ps"],["잠언",903,31,"Prv"],["코헬렛",932,12,"Eccl"],["아가",944,8,"Sng"],["지혜서",951,19,"Wis"],["집회서",972,51,"Sir"],["이사야서",1028,66,"Is"],["예레미야서",1096,52,"Jer"],["애가",1172,5,"Lam"],["바룩서",1180,6,"Bar"],["에제키엘서",1191,48,"Ez"],["다니엘서",1258,14,"Dn"],["호세아서",1287,14,"Hos"],["요엘서",1298,4,"Jl"],["아모스서",1303,9,"Am"],["오바드야서",1313,1,"Ob"],["요나서",1316,4,"Jon"],["미카서",1320,7,"Mi"],["나훔서",1327,3,"Na"],["하바쿡서",1331,3,"Hb"],["스바니야서",1335,3,"Zep"],["하까이서",1339,2,"Hg"],["즈카르야서",1342,14,"Zec"],["말라키서",1354,3,"Mal"],["마태오 복음서",1360,28,"Mt"],["마르코 복음서",1411,16,"Mk"],["루카 복음서",1445,24,"Lk"],["요한 복음서",1500,21,"Jn"],["사도행전",1542,28,"Acts"],["로마 신자들에게 보낸 서간",1591,16,"Rom"],["코린토 신자들에게 보낸 첫째 서간",1613,16,"1Cor"],["코린토 신자들에게 보낸 둘째 서간",1635,13,"2Cor"],["갈라티아 신자들에게 보낸 서간",1650,6,"Gal"],["에페소 신자들에게 보낸 서간",1659,6,"Eph"],["필리피 신자들에게 보낸 서간",1667,4,"Phil"],["콜로새 신자들에게 보낸 서간",1673,4,"Col"],["테살로니카 신자들에게 보낸 첫째 서간",1679,5,"1Thes"],["테살로니카 신자들에게 보낸 둘째 서간",1685,3,"2Thes"],["티모테오에게 보낸 첫째 서간",1689,6,"1Tm"],["티모테오에게 보낸 둘째 서간",1696,4,"2Tm"],["티토에게 보낸 서간",1701,3,"Ti"],["필레몬에게 보낸 서간",1705,1,"Phlm"],["히브리인들에게 보낸 서간",1708,13,"Heb"],["야고보 서간",1724,5,"Jas"],["베드로의 첫째 서간",1731,5,"1Pt"],["베드로의 둘째 서간",1738,3,"2Pt"],["요한의 첫째 서간",1743,5,"1Jn"],["요한의 둘째 서간",1750,1,"2Jn"],["요한의 셋째 서간",1752,1,"3Jn"],["유다 서간",1754,1,"Jude"],["요한 묵시록",1757,22,"Rv"]
-];
-const $=id=>document.getElementById(id);
-function unit(bi){return books[bi][3]==='Ps'?'편':'장'}
-function chLabel(bi,ch){return books[bi][0]+' '+ch+unit(bi)}
-// 연대순 책 인덱스 (가톨릭 성경 기준)
-// Great Adventure 스타일 12시대 (색상 + 핵심 구간)
-const periods = [
-  {id:1, name:'초기 세계', color:'#0d9488', desc:'창조와 인류의 시작'},
-  {id:2, name:'성조 시대', color:'#6b21a8', desc:'아브라함과 계약'},
-  {id:3, name:'이집트와 탈출', color:'#dc2626', desc:'해방과 구원'},
-  {id:4, name:'광야 생활', color:'#a16207', desc:'약속의 땅을 향한 여정'},
-  {id:5, name:'정복과 판관 시대', color:'#16a34a', desc:'약속의 땅 정착'},
-  {id:6, name:'왕국 시대', color:'#7c3aed', desc:'이스라엘 왕국의 전성기'},
-  {id:7, name:'분열 왕국', color:'#1f2937', desc:'왕국의 분열과 쇠퇴'},
-  {id:8, name:'유배 시대', color:'#0ea5e9', desc:'바빌론 유배와 상실'},
-  {id:9, name:'귀환 시대', color:'#eab308', desc:'고향으로 돌아오다'},
-  {id:10, name:'마카베오 항쟁', color:'#ea580c', desc:'신앙과 율법을 지키기 위한 투쟁'},
-  {id:11, name:'메시아의 성취', color:'#ca8a04', desc:'예수 그리스도 안에서 이루어진 구원'},
-  {id:12, name:'교회 시대', color:'#f8fafc', desc:'성령과 교회의 탄생'}
-];
-
-// 장 단위 연대순: [bookIndex, fromChapter, toChapter, periodId]
-// toChapter inclusive. books[bi][2] is total chapters.
-const chronoRanges = [
-  // 1. 초기 세계 — 창세기 1–11장
-  [0,1,11,1],
-  // 2. 성조 시대 — 창세기 12–50장
-  [0,12,50,2],
-  // 3. 이집트와 탈출 — 탈출기
-  [1,1,40,3],
-  // 4. 광야 생활 — 민수기
-  [3,1,36,4],
-  // 5. 정복과 판관 시대 — 여호수아기 · 판관기
-  [5,1,24,5], [6,1,21,5],
-  // 6. 왕국 시대 — 사무엘기 · 열왕기 상권 1–11장
-  [8,1,31,6], [9,1,24,6], [10,1,11,6],
-  // 7. 분열 왕국 — 열왕기 상권 12장 – 열왕기 하권 16장
-  [10,12,22,7], [11,1,16,7],
-  // 8. 유배 시대 — 열왕기 하권 17–25장
-  [11,17,25,8],
-  // 9. 귀환 시대 — 에즈라기 · 느헤미야기
-  [14,1,10,9], [15,1,13,9],
-  // 10. 마카베오 항쟁 — 마카베오기 상·하권
-  [19,1,16,10], [20,1,15,10],
-  // 11. 메시아의 성취 — 루카 복음서
-  [48,1,24,11],
-  // 12. 교회 시대 — 사도행전
-  [50,1,28,12]
-];
-
+/* storage: /js/storage.js */
+/* 정적 데이터: /js/data.js */
 let planType=store.planType||'all';
 let customPeriodSet=jget('customPeriods',[1,2,3,4,5,6,7,8,9,10,11,12],Array.isArray);
 let customBookSet=jget('customBooks',null);
@@ -178,6 +61,25 @@ function rememberLastRead(bi, ch, planId){
   lastReadByPlan[pid]={book:+bi, chapter:+ch, at:new Date().toISOString()};
   persistLastRead();
 }
+
+function planPaceMode(p){ return (p && p.paceMode)==='flexible'?'flexible':'fixed'; }
+function adjustFlexiblePlan(p){
+  if(!p || planPaceMode(p)!=='flexible') return false;
+  const pr=planProgress(p);
+  if(!pr || !pr.backlog || !pr.backlog.length) return false;
+  // extend calendar so backlog can be absorbed: add backlog length in reading days
+  const extra=pr.backlog.length;
+  if(p.skipSundays){
+    p.calendarDays=(p.calendarDays||p.days||1)+extra;
+  } else {
+    p.days=(p.days||1)+extra;
+  }
+  // persist
+  const idx=savedPlans.findIndex(x=>x.id===p.id);
+  if(idx>=0){ savedPlans[idx]=p; store.savedPlans=JSON.stringify(savedPlans); }
+  return true;
+}
+
 function planProgress(p){
   const seq=buildSeqForPlan(p);
   let done=0;
@@ -374,239 +276,38 @@ async function loadMissa(date){
   }
 }
 
-/* ===== 통독 인증 배지 ===== */
-const BADGE_DEFS=[
-  {id:'all', name:'전체 통독', icon:'✝', accent:'#8B1E3F',
-    sentence:'당신의 말씀은 제 발에 등불, 제 길에 빛입니다', ref:'시편 119,105', books:'all'},
-  {id:'ot', name:'구약', icon:'🕯', accent:'#4A5D23',
-    sentence:'나는 너를 큰 민족이 되게 하고, 너에게 복을 내리며, 네 이름을 위대하게 하겠다', ref:'창세기 12,2', range:[0,45]},
-  {id:'nt', name:'신약', icon:'🕊', accent:'#1E4D7B',
-    sentence:'말씀이 사람이 되시어 우리 가운데 사셨다', ref:'요한 1,14', range:[46,72]},
-  {id:'chrono', name:'연대기', icon:'🕰', accent:'#C9A227',
-    sentence:'과거에 하느님께서는 여러 번 여러 가지 모양으로 조상들에게 말씀하셨지만', ref:'히브리 1,1', chrono:true},
-  {id:'pentateuch', name:'오경', icon:'📜', accent:'#6B4F2A',
-    sentence:'너 이스라엘아, 들어라! 주 우리 하느님은 한 분이신 주님이시다', ref:'신명 6,4', range:[0,4]},
-  {id:'history', name:'역사서', icon:'🏛', accent:'#5C4B3A',
-    sentence:'나와 내 집안은 주님을 섬기겠습니다', ref:'여호수아 24,15', range:[5,20]},
-  {id:'wisdom', name:'시서·지혜서', icon:'🎶', accent:'#7A5C1E',
-    sentence:'주님은 나의 목자시니 아쉬울 것 없네', ref:'시편 23,1', range:[21,27]},
-  {id:'prophets', name:'예언서', icon:'🔥', accent:'#B33A1A',
-    sentence:'정의롭게 행동하고 신의를 사랑하며 겸손히 네 하느님과 함께 걸어라', ref:'미카 6,8', range:[28,45]},
-  {id:'gospels', name:'복음서', icon:'✝', accent:'#172b43',
-    sentence:'나를 따라오너라. 내가 너희를 사람 낚는 어부로 만들겠다', ref:'마태 4,19', range:[46,49]},
-  {id:'acts', name:'사도행전', icon:'🔥', accent:'#2E5A88',
-    sentence:'성령께서 여러분에게 내리시면 여러분은 힘을 받아, 땅끝에 이르기까지 나의 증인이 될 것입니다', ref:'사도 1,8', range:[50,50]},
-  {id:'epistles', name:'서간', icon:'✉', accent:'#3D4F6F',
-    sentence:'사랑은 기다리며 사랑을 베풀고, 시기하지 않으며 자랑하지 않습니다', ref:'1코린 13,4', range:[51,71]},
-  {id:'revelation', name:'묵시록', icon:'⭐', accent:'#5B2C6F',
-    sentence:'보라, 내가 모든 것을 새롭게 만든다', ref:'묵시 21,5', range:[72,72]}
-];
+/* 배지: /js/badges.js */
 
 
-const BOOK_BADGE_DEFS=(function(){
-  const icons=['📖','📜','🕯','✝','🕊','⭐','🔥','✉','🏛','🎶'];
-  return books.map((b,i)=>({
-    id:'book_'+i,
-    name:b[0],
-    icon:icons[i%icons.length],
-    accent: i<46 ? '#4A5D23' : '#1E4D7B',
-    sentence:b[0]+' 전권을 읽으며 말씀을 마음에 새겼다',
-    ref:b[0],
-    bookIndex:i,
-    group:'book'
-  }));
-})();
-function allBadgeDefs(){ return BADGE_DEFS.concat(BOOK_BADGE_DEFS); }
-function badgesForTab(tab){
-  if(tab==='book') return BOOK_BADGE_DEFS;
-  return BADGE_DEFS;
-}
-let badgeTab=store.badgeTab||'range';
-let badgeAwards=jget('badgeAwards_v1',{},isPlainObj);
-let badgeCompleteSnap=jget('badgeCompleteSnap_v1',{},isPlainObj);
-let currentBadgeShare=null;
-
-function isChapterDoneForBadge(bi,ch){
-  return !!chapterRead[bi+':'+ch];
-}
-function booksFullyRead(from,to){
-  for(let bi=from;bi<=to;bi++){
-    const total=books[bi][2];
-    for(let c=1;c<=total;c++) if(!isChapterDoneForBadge(bi,c)) return false;
-  }
-  return true;
-}
-function chronoFullyRead(){
-  if(typeof chronoRanges==='undefined'||!chronoRanges||!chronoRanges.length) return false;
-  for(const r of chronoRanges){
-    const bi=r[0], from=r[1], to=r[2];
-    for(let c=from;c<=to;c++) if(!isChapterDoneForBadge(bi,c)) return false;
-  }
-  return true;
-}
-function isBadgeComplete(def){
-  if(def.books==='all') return booksFullyRead(0,books.length-1);
-  if(def.chrono) return chronoFullyRead();
-  if(typeof def.bookIndex==='number') return booksFullyRead(def.bookIndex, def.bookIndex);
-  if(def.range) return booksFullyRead(def.range[0],def.range[1]);
-  return false;
-}
-function badgeProgress(def){
-  let done=0,total=0;
-  const addBook=(bi,from,to)=>{
-    const end=to!=null?to:books[bi][2];
-    const start=from!=null?from:1;
-    for(let c=start;c<=end;c++){ total++; if(isChapterDoneForBadge(bi,c)) done++; }
-  };
-  if(def.books==='all'){ for(let bi=0;bi<books.length;bi++) addBook(bi); }
-  else if(def.chrono && chronoRanges){ for(const r of chronoRanges) addBook(r[0],r[1],r[2]); }
-  else if(typeof def.bookIndex==='number'){ addBook(def.bookIndex); }
-  else if(def.range){ for(let bi=def.range[0];bi<=def.range[1];bi++) addBook(bi); }
-  const pct=total?Math.round(done/total*100):0;
-  return {done,total,pct};
-}
-function saveBadgeState(){
-  store.badgeAwards_v1=JSON.stringify(badgeAwards);
-  store.badgeCompleteSnap_v1=JSON.stringify(badgeCompleteSnap);
-}
-function pilgrimageLabel(count){
-  if(!count||count<1) return '';
-  if(count===1) return '첫 순례';
-  if(count===2) return '두 번째 순례';
-  if(count===3) return '세 번째 순례';
-  return count+'번째 순례';
-}
-function awardBadge(def){
-  const prev=badgeAwards[def.id]||{count:0};
-  const count=(prev.count||0)+1;
-  const now=new Date().toISOString();
-  badgeAwards[def.id]={count, lastAt:now, firstAt:prev.firstAt||now};
-  saveBadgeState();
-  showBadgeModal(def,count,{fresh:true});
-}
-function checkBadgeAwards(){
-  const newly=[];
-  for(const def of allBadgeDefs()){
-    const complete=isBadgeComplete(def);
-    const was=!!badgeCompleteSnap[def.id];
-    if(complete && !was){
-      awardBadge(def);
-      newly.push(def.id);
-    }
-    badgeCompleteSnap[def.id]=complete;
-  }
-  if(newly.length) saveBadgeState();
-  return newly;
-}
-function showBadgeModal(def,count,opts){
-  const m=$('badgeModal'); if(!m) return;
-  opts=opts||{};
-  currentBadgeShare={def:def, count:count||0};
-  if($('badgeModalIcon')) $('badgeModalIcon').textContent=def.icon||'✦';
-  if($('badgeModalTitle')) $('badgeModalTitle').textContent=def.name;
-  if($('badgeModalSentence')) $('badgeModalSentence').innerHTML='「'+safe(def.sentence)+'」'+(def.ref?'<br><span class="small muted" style="font-style:normal">— '+safe(def.ref)+'</span>':'');
-  const prog=badgeProgress(def);
-  const pil=pilgrimageLabel(count);
-  const parts=[];
-  if(opts.fresh) parts.push('증표를 받았습니다');
-  if(pil) parts.push(pil);
-  parts.push('진행 '+prog.pct+'%');
-  if($('badgeModalMeta')) $('badgeModalMeta').textContent=parts.join(' · ');
-  if($('badgeModalBar')) $('badgeModalBar').style.width=Math.min(100,prog.pct)+'%';
-  const seal=$('badgeModalSeal');
-  if(seal){ seal.style.borderColor=def.accent||''; seal.style.boxShadow='0 0 0 6px '+(def.accent||'#C9A227')+'33, 0 8px 28px '+(def.accent||'#C9A227')+'55'; }
-  m.classList.remove('hidden');
-}
-function closeBadgeModal(){ const m=$('badgeModal'); if(m) m.classList.add('hidden'); currentBadgeShare=null; }
-async function shareBadge(){
-  if(!currentBadgeShare) return;
-  const {def,count}=currentBadgeShare;
-  const pil=pilgrimageLabel(count);
-  const text='말씀의 길 · 순례의 증표\n'+def.name+(pil?' ('+pil+')':'')+'\n「'+def.sentence+'」'+(def.ref?'\n— '+def.ref:'');
-  try{
-    if(navigator.share){ await navigator.share({title:def.name, text:text}); return; }
-  }catch(e){ if(e&&e.name==='AbortError') return; }
-  try{
-    await navigator.clipboard.writeText(text);
-    if(typeof toast==='function') toast('증표 문장을 복사했습니다');
-    else alert('증표 문장을 복사했습니다');
-  }catch(e){
-    prompt('아래 문장을 복사하세요', text);
-  }
-}
-function setBadgeTab(tab){
-  badgeTab=tab==='book'?'book':'range';
-  store.badgeTab=badgeTab;
-  renderBadges();
-}
-function renderBadges(){
-  const grid=$('badgeGrid'); if(!grid) return;
-  const list=badgesForTab(badgeTab);
-  let unlocked=0, total=list.length;
-  const near=[];
-  // tab UI state
-  document.querySelectorAll('[data-badge-tab]').forEach(btn=>{
-    const on=btn.getAttribute('data-badge-tab')===(badgeTab==='book'?'book':'range');
-    btn.classList.toggle('on', on);
+function appDialog({title, message, confirmLabel, cancelLabel, danger}){
+  return new Promise(resolve=>{
+    const m=$('appDialog'); if(!m){ resolve(window.confirm(message)); return; }
+    $('appDialogTitle').textContent=title||'알림';
+    $('appDialogMessage').textContent=message||'';
+    const ok=$('appDialogOk'), cancel=$('appDialogCancel');
+    ok.textContent=confirmLabel||'확인';
+    if(cancelLabel){ cancel.classList.remove('hidden'); cancel.textContent=cancelLabel; }
+    else cancel.classList.add('hidden');
+    m.classList.remove('hidden');
+    const done=(v)=>{ m.classList.add('hidden'); ok.onclick=null; cancel.onclick=null; resolve(v); };
+    ok.onclick=()=>done(true);
+    cancel.onclick=()=>done(false);
+    m.onclick=(e)=>{ if(e.target===m && cancelLabel) done(false); };
   });
-  const html=list.map(def=>{
-    const prog=badgeProgress(def);
-    const award=badgeAwards[def.id];
-    const has=award&&award.count>0;
-    if(has) unlocked++;
-    const complete=isBadgeComplete(def);
-    const isNear=!has && prog.pct>=80 && prog.pct<100;
-    if(isNear) near.push({def,prog});
-    const countLabel=has?('×'+award.count):'';
-    const line=has
-      ? (complete?pilgrimageLabel(award.count)+' · 유지':'이전 완주 · 다시 걷는 중')
-      : (isNear?'곧 받을 수 있습니다':'아직 걸어보지 않은 길');
-    const cls='badge-card '+(has?'unlocked':'locked')+(isNear?' near':'')+(def.bookIndex!=null?' badge-book':'');
-    return '<button type="button" class="'+cls+'" data-badge="'+def.id+'" onclick="openBadgeDetail(\''+def.id+'\')" style="'+(has&&def.accent?'border-color:'+def.accent+'88':'')+'">'+
-      (has?'<span class="badge-count">'+countLabel+'</span>':'')+
-      '<span class="badge-ico" aria-hidden="true">'+(has?def.icon:'·')+'</span>'+
-      '<span class="badge-name">'+safe(def.name)+'</span>'+
-      '<span class="badge-line">'+line+'</span>'+
-      '<span class="badge-mini-bar" aria-hidden="true"><span style="width:'+prog.pct+'%"></span></span>'+
-      '<span class="small muted">'+prog.pct+'%</span>'+
-      '</button>';
-  }).join('');
-  grid.innerHTML=html||'<p class="muted small">표시할 증표가 없습니다.</p>';
-  if($('badgeSummary')) $('badgeSummary').textContent='획득 '+unlocked+' · 전체 '+total+(badgeTab==='book'?' (권별)':' (범위)');
-  const nearBox=$('badgeNear');
-  if(nearBox){
-    if(near.length){
-      nearBox.classList.remove('hidden');
-      const show=near.slice(0,5).map(n=>safe(n.def.name)+' '+n.prog.pct+'%').join(' · ');
-      nearBox.innerHTML='<b>거의 다 왔습니다</b> · '+show+(near.length>5?' 외 '+(near.length-5)+'개':'');
-    } else {
-      nearBox.classList.add('hidden');
-      nearBox.innerHTML='';
-    }
-  }
 }
-function openBadgeDetail(id){
-  const def=allBadgeDefs().find(b=>b.id===id); if(!def) return;
-  const award=badgeAwards[id];
-  const prog=badgeProgress(def);
-  const complete=isBadgeComplete(def);
-  if(award&&award.count){
-    showBadgeModal(def, award.count, {fresh:false});
-    if($('badgeModalMeta')){
-      const d=award.lastAt?new Date(award.lastAt).toLocaleDateString('ko-KR'):'';
-      const parts=[];
-      if(d) parts.push(d+' 기록');
-      parts.push(pilgrimageLabel(award.count));
-      parts.push('진행 '+prog.pct+'%'+(complete?' · 유지 중':''));
-      $('badgeModalMeta').textContent=parts.join(' · ');
-    }
-  } else {
-    showBadgeModal(def, 0, {fresh:false});
-    if($('badgeModalMeta')) $('badgeModalMeta').textContent='진행 '+prog.done+' / '+prog.total+' ('+prog.pct+'%) · 아직 증표 없음';
-    if($('badgeModalSentence')) $('badgeModalSentence').innerHTML='「'+safe(def.sentence)+'」'+(def.ref?'<br><span class="small muted" style="font-style:normal">— '+safe(def.ref)+'</span>':'');
-  }
-}
+function appAlert(message, title){ return appDialog({title:title||'알림', message, confirmLabel:'확인'}); }
+function appConfirm(message, title){ return appDialog({title:title||'확인', message, confirmLabel:'확인', cancelLabel:'취소'}); }
 
+
+function maybeShowOnboard(){
+  if(store.onboardDone_v1==='1') return;
+  const m=$('onboardModal'); if(m) m.classList.remove('hidden');
+}
+function finishOnboard(target){
+  store.onboardDone_v1='1';
+  const m=$('onboardModal'); if(m) m.classList.add('hidden');
+  if(target&&target!=='home') view(target);
+}
 
 function view(id,planId){
   if(id==='read') activeReadPlanId=planId||'';
@@ -910,10 +611,11 @@ function markChapter(){
     const key=verseKey(selectedBook,selectedChapter);
     const nowDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];
     afterChapterMarked(nowDone);
+    if(activeReadPlanId){ const p=savedPlans.find(x=>x.id===activeReadPlanId); if(p&&planPaceMode(p)==='flexible'){ /* backlog checked on dashboard */ } }
   }catch(e){}
 }
 
-function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if(!confirm(chLabel(selectedBook,selectedChapter)+'의 읽음 기록을 지울까요?'))return;if(activeReadPlanId)setPlanChapterDone(activeReadPlanId,key,false,[]);else{delete verseRead[key];delete chapterRead[key];saveVerseData()}renderChapter()}
+async function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if(!(await appConfirm(chLabel(selectedBook,selectedChapter)+'의 읽음 기록을 지울까요?','읽음 기록 삭제')))return;if(activeReadPlanId)setPlanChapterDone(activeReadPlanId,key,false,[]);else{delete verseRead[key];delete chapterRead[key];saveVerseData()}renderChapter()}
 function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
 function dailyRange(){let elapsed=Math.max(1,Math.floor((Date.now()-new Date(start+'T00:00:00'))/86400000)+1),day=Math.min(days,elapsed),total=totalChapters(),a=Math.floor((day-1)*total/days),z=Math.max(a+1,Math.floor(day*total/days));return{day,a,z}}
@@ -1066,19 +768,19 @@ function resumeLastRead(){
 }
 function openTodayPortion(){
   const p=getActivePlan();
-  if(!p){ alert('진행 중인 통독 계획이 없습니다.'); return; }
+  if(!p){ appAlert('진행 중인 통독 계획이 없습니다.'); return; }
   openPlanReading(p.id,'today');
 }
 function completePlanToday(planId){
   const p=savedPlans.find(x=>x.id===planId)||getActivePlan();
-  if(!p){ alert('계획이 없습니다.'); return; }
+  if(!p){ appAlert('계획이 없습니다.'); return; }
   const items=todayItemsForPlan(p);
-  if(!items.length){ alert('오늘 완료할 분량이 없습니다.'); return; }
+  if(!items.length){ appAlert('오늘 완료할 분량이 없습니다.'); return; }
   for(const it of items){const count=verseTotal[it.key]||(selectedBook===it.book&&selectedChapter===it.chapter?currentVerses.length:0);const verses=Array.from({length:count},(_,i)=>i+1);setPlanChapterDone(p.id,it.key,true,verses);}
   savePlanReadingState();
   dashboard();
   renderReadPlanPreview();
-  alert('「'+p.name+'」 오늘 분량 '+items.length+'개를 완료로 기록했습니다.');
+  appAlert('「'+p.name+'」 오늘 분량 '+items.length+'개를 완료로 기록했습니다.');
 }
 function renderReadPlanPreview(){
   const meta=$('readPlanMeta');
@@ -1285,10 +987,10 @@ function renderSavedPlans(){
     return '<div style="padding:12px;margin:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--soft)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+safe(p.name)+'</b><div class="small muted">'+p.start+' 시작 · '+p.days+'일 · '+done+'/'+seq.length+' ('+pct+'%)</div><div class="progress" style="margin-top:6px"><span style="width:'+pct+'%"></span></div></div><div class="row" style="gap:6px"><button type="button" class="alt" style="padding:6px 10px;font-size:12px" data-plan-id="'+safe(p.id)+'" onclick="editSavedPlan(this.dataset.planId)">편집</button><button type="button" class="alt" style="padding:6px 10px;font-size:12px" onclick="deleteSavedPlan('+idx+')">삭제</button></div></div></div>';
   }).join('');
 }
-function editSavedPlan(planId){
+async function editSavedPlan(planId){
   const p=savedPlans.find(x=>x.id===planId);if(!p)return;
   if(editingPlanId===planId)return;
-  if(editingPlanId){if(!confirm('현재 편집 중인 변경 사항을 취소하고 다른 계획을 편집할까요?'))return;cancelPlanEdit()}
+  if(editingPlanId){if(!(await appConfirm('현재 편집 중인 변경 사항을 취소하고 다른 계획을 편집할까요?','편집 취소')))return;cancelPlanEdit()}
   const priorEditingId=editingPlanId;
   const formValues={};
   ['planName','planType','start','autoMode','autoDays','autoPerDay','autoEnd','days','customDays'].forEach(id=>{const el=$(id);if(el)formValues[id]=el.value});
@@ -1326,9 +1028,9 @@ function cancelPlanEdit(){
   if($('cancelPlanEditBtn'))$('cancelPlanEditBtn').classList.toggle('hidden',!editingPlanId);
   syncPeriodFromAuto();renderPlanCardPreview();
 }
-function deleteSavedPlan(idx){
+async function deleteSavedPlan(idx){
   if(idx<0||idx>=savedPlans.length) return;
-  if(!confirm('「'+savedPlans[idx].name+'」 계획을 삭제할까요?')) return;
+  if(!(await appConfirm('「'+savedPlans[idx].name+'」 계획을 삭제할까요?','계획 삭제'))) return;
   const removed=savedPlans[idx].id;
   if(editingPlanId===removed)cancelPlanEdit();
   savedPlans.splice(idx,1);
@@ -1456,12 +1158,12 @@ function savePlan(){
   rebuildPlanSeq();
   const total=totalChapters();
   if(!total){
-    alert('선택한 범위에 분량이 없습니다. 시대 또는 책을 선택해 주세요.');
+    appAlert('선택한 범위에 분량이 없습니다. 시대 또는 책을 선택해 주세요.');
     return;
   }
   const existing=editingPlanId?savedPlans.find(x=>x.id===editingPlanId):null;
   if(!existing&&savedPlans.length>=5){
-    alert('통독 계획은 최대 5개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
+    appAlert('통독 계획은 최대 5개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
     renderSavedPlans();return;
   }
   const enteredName=$('planName')?$('planName').value.trim():'';
@@ -1471,6 +1173,7 @@ function savePlan(){
     id:existing?existing.id:'p'+Date.now(),
     name,planType,days,start,
     skipSundays:!!planSkipSundays,
+      paceMode:(($('planPaceMode')||{}).value||'fixed'),
     calendarDays:planSkipSundays?planCalendarDays:null,
     customPeriodSet:customPeriodSet.slice(),
     customBookSet:customBookSet.slice()
@@ -1488,11 +1191,11 @@ function savePlan(){
   dashboard();
   renderHomePlans();
   preview();
-  alert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/5)');
+  appAlert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/5)');
 }
 function completeToday(){
   const p=getActivePlan()||savedPlans[0];
-  if(!p){ alert('저장된 통독 계획이 없습니다.'); return; }
+  if(!p){ appAlert('저장된 통독 계획이 없습니다.'); return; }
   completePlanToday(p.id);
 }
 
@@ -2112,6 +1815,37 @@ function stats(){
   if($('verseHistory')) $('verseHistory').innerHTML=rows?rows+'<details><summary>장별 상세 보기</summary>'+detail+'</details>':'아직 장·절 통독 기록이 없습니다.';
 }
 
+
+function pushRecoveryBackup(snapshot){
+  let list=[];
+  try{ list=JSON.parse(store.recoveryBackupList_v1||'[]'); if(!Array.isArray(list)) list=[]; }catch(e){ list=[]; }
+  list.unshift({ at:new Date().toISOString(), data:snapshot });
+  list=list.slice(0,3);
+  store.recoveryBackupList_v1=JSON.stringify(list);
+  // keep legacy single key for old UI
+  store.recoveryBackup_v1=JSON.stringify(snapshot);
+  return list.length;
+}
+function listRecoveryBackups(){
+  try{ const list=JSON.parse(store.recoveryBackupList_v1||'[]'); return Array.isArray(list)?list:[]; }catch(e){ return []; }
+}
+function downloadRecoverySnapshot(){
+  const list=listRecoveryBackups();
+  let data=null;
+  if(list.length) data=list[0].data;
+  else {
+    try{ data=JSON.parse(store.recoveryBackup_v1||'null'); }catch(e){ data=null; }
+  }
+  if(!data) return false;
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='malssumgil-recovery-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return true;
+}
+
 function gatherBackup(){
   return {
     v:2,
@@ -2154,19 +1888,7 @@ function snapshotCurrentForRecovery(){
     return false;
   }
 }
-function downloadRecoverySnapshot(){
-  try{
-    const raw=store.recoveryBackup_v1;
-    if(!raw) return false;
-    const blob=new Blob([raw],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='malssumgil-recovery-'+new Date().toISOString().slice(0,10)+'.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    return true;
-  }catch(e){ return false; }
-}
+
 function exportData(){
   const data=gatherBackup();
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -2177,11 +1899,11 @@ function exportData(){
   URL.revokeObjectURL(a.href);
   if($('syncStatus')) $('syncStatus').textContent='JSON 파일을 다운로드했습니다. 다른 기기에서 JSON 가져오기로 불러오세요.';
 }
-function importData(ev){
+async function importData(ev){
   const f=ev.target.files&&ev.target.files[0];
   if(!f)return;
   const reader=new FileReader();
-  reader.onload=()=>{
+  reader.onload=async ()=>{
     try{
       let data;
       try{ data=JSON.parse(reader.result); }catch(e){ throw new Error('JSON 형식이 아닙니다.'); }
@@ -2189,7 +1911,7 @@ function importData(ev){
       const planCount=Array.isArray(data.savedPlans)?data.savedPlans.length:0;
       const noteCount=Array.isArray(data.notes)?data.notes.length:0;
       const exported=data.exportedAt?('\n내보낸 시각: '+String(data.exportedAt).slice(0,19).replace('T',' ')):'';
-      if(!confirm('현재 기기의 진도·노트·계획을 이 백업으로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개'+exported+'\n\n가져오기 전에 현재 데이터를 자동으로 백업해 둡니다.')){
+      if(!(await appConfirm('현재 기기의 진도·노트·계획을 이 백업으로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개'+exported+'\n\n가져오기 전에 현재 데이터를 자동으로 백업해 둡니다.','백업 가져오기'))){
         if($('syncStatus')) $('syncStatus').textContent='가져오기를 취소했습니다.';
         return;
       }
@@ -2204,14 +1926,16 @@ function importData(ev){
   reader.readAsText(f);
   ev.target.value='';
 }
-function applyBackup(data,opts){
+async function applyBackup(data,opts){
+  try{ if(!opts||!opts.skipRecovery){ pushRecoveryBackup(gatherBackup()); } }catch(e){}
+
   opts=opts||{};
   if(!data||typeof data!=='object') throw new Error('invalid');
   if(!isValidBackup(data)) throw new Error('invalid backup shape');
   if(!opts.skipConfirm){
     const planCount=Array.isArray(data.savedPlans)?data.savedPlans.length:0;
     const noteCount=Array.isArray(data.notes)?data.notes.length:0;
-    if(!confirm('현재 기기의 진도·노트·계획을 이 데이터로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개\n\n적용 전에 현재 데이터를 자동으로 백업해 둡니다.')){
+    if(!(await appConfirm('현재 기기의 진도·노트·계획을 이 데이터로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개\n\n적용 전에 현재 데이터를 자동으로 백업해 둡니다.','데이터 적용'))){
       throw new Error('cancelled');
     }
     snapshotCurrentForRecovery();
@@ -2277,15 +2001,15 @@ function copySyncCode(){
     if($('syncStatus')) $('syncStatus').textContent='코드 생성 실패: '+e.message;
   });
 }
-function applySyncCode(){
+async function applySyncCode(){
   const code=($('syncCodeIn')&&$('syncCodeIn').value||'').trim();
   if(!code){if($('syncStatus')) $('syncStatus').textContent='코드를 붙여 넣어 주세요.';return;}
   if($('syncStatus')) $('syncStatus').textContent='복원 중… (Web Worker)';
-  workerCall('decode', code).then(data=>{
+  workerCall('decode', code).then(async data=>{
     if(!isValidBackup(data)) throw new Error('invalid backup shape');
     const planCount=Array.isArray(data.savedPlans)?data.savedPlans.length:0;
     const noteCount=Array.isArray(data.notes)?data.notes.length:0;
-    if(!confirm('현재 기기의 진도·노트·계획을 이 동기화 코드로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개\n\n복원 전에 현재 데이터를 자동으로 백업해 둡니다.')){
+    if(!(await appConfirm('현재 기기의 진도·노트·계획을 이 동기화 코드로 덮어쓸까요?\n\n· 계획 '+planCount+'개 · 노트 '+noteCount+'개\n\n복원 전에 현재 데이터를 자동으로 백업해 둡니다.','동기화 복원'))){
       if($('syncStatus')) $('syncStatus').textContent='복원을 취소했습니다.';
       return;
     }
@@ -2378,11 +2102,11 @@ function readBacklog(planId){
   openReading(items[0].book,items[0].chapter,planId);
   renderReadPlanPreview();
 }
-function skipBacklog(planId){
+async function skipBacklog(planId){
   const p=savedPlans.find(x=>x.id===planId); if(!p) return;
   const items=backlogForPlan(p);
   if(!items.length) return;
-  if(!confirm('밀린 '+items.length+'개를 건너뛸까요?\n읽음으로 기록되지는 않으며, 밀린 분량 안내에서만 빠집니다. 언제든 되돌릴 수 있습니다.')) return;
+  if(!(await appConfirm('밀린 '+items.length+'개를 건너뛸까요?\n읽음으로 기록되지는 않으며, 밀린 분량 안내에서만 빠집니다. 언제든 되돌릴 수 있습니다.','밀린 분량'))) return;
   p.skipped=p.skipped||{};
   for(const it of items) p.skipped[it.key]=true;
   p.snap=null; persistPlans(); dashboard(); renderReadPlanPreview();
@@ -2610,11 +2334,11 @@ function saveEditNote(id){
   noteEditId=null; persistNotes(); renderNotes(); renderOneLine();
   toast('수정했습니다.');
 }
-function deleteNote(id){
+async function deleteNote(id){
   const i=notes.findIndex(x=>x.id===id);
   if(i<0) return;
   const n=notes[i];
-  if(!confirm((n.date||'')+' 묵상을 삭제할까요?')) return;
+  if(!(await appConfirm((n.date||'')+' 묵상을 삭제할까요?','묵상 삭제'))) return;
   notes.splice(i,1);
   persistNotes(); renderNotes(); renderOneLine();
   if(typeof stats==='function') try{stats()}catch(e){}
@@ -2937,3 +2661,5 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
 }
 
 document.addEventListener('click',function(e){ const m=$('badgeModal'); if(m&&!m.classList.contains('hidden')&&e.target===m) closeBadgeModal(); });
+
+document.addEventListener('DOMContentLoaded',function(){ try{ maybeShowOnboard(); }catch(e){} });

@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#172b43"><title>말씀의 길</title>
+<meta name="description" content="가톨릭 성경 통독·매일미사·묵상 노트. 한국천주교주교회의 성경과 함께하는 말씀의 길.">
+<meta property="og:title" content="말씀의 길 — 가톨릭 성경 통독">
+<meta property="og:description" content="통독 계획, 순례의 증표, 매일미사, 묵상 노트">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#172b43">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -11,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="말씀의 길">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="/css/app.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+<script src="/js/vendor/chart.umd.min.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -42,7 +47,7 @@
 <p class="muted" id="homeHint">진행 중인 통독 계획입니다. 최대 5개까지 저장할 수 있습니다.</p>
 <div id="homePlanList" style="display:flex;flex-direction:column;gap:14px;margin-top:12px"></div>
 <div class="card" style="margin-top:8px">
-<p class="small muted">본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a> · 공식 본문을 장별로 저장해 오프라인에서도 읽을 수 있습니다.</p>
+<p class="small muted">본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a> · 공식 본문을 장별로 저장해 오프라인에서도 읽을 수 있습니다. 본문 저작권은 한국천주교주교회의에 있으며, 개인 통독·묵상 목적으로 이용합니다.</p>
 </div>
 </section>
 <section id="missa" class="hidden"><div class="eyebrow">매일미사</div><div class="h1">오늘의 말씀</div>
@@ -170,7 +175,10 @@
 <option value="endDate">종료일</option>
 </select>
 </label>
-<label id="autoDaysWrap">일수 <input type="number" id="autoDays" min="7" max="2000" value="365" style="width:90px" onchange="syncPeriodFromAuto()"> <button type="button" id="skipSundayBtn" class="alt" aria-pressed="false" onclick="toggleSundaySkip()">주일 제외</button></label>
+<label id="autoDaysWrap">일수 <input type="number" id="autoDays" min="7" max="2000" value="365" style="width:90px" onchange="syncPeriodFromAuto()"></label>
+<button type="button" id="skipSundayBtn" class="alt" aria-pressed="false" onclick="toggleSundaySkip()">주일 제외</button>
+<label class="small">진행 방식
+<select id="planPaceMode"><option value="fixed">목표일 고정</option><option value="flexible">여유 모드 (밀리면 종료일 조정)</option></select></label>
 <label id="autoPerDayWrap" class="hidden">하루 장 수 <input type="number" id="autoPerDay" min="1" max="50" value="3" style="width:70px" onchange="syncPeriodFromAuto()"></label>
 <label id="autoEndWrap" class="hidden">종료일 <input type="date" id="autoEnd" onchange="syncPeriodFromAuto()"></label>
 </div>
@@ -352,6 +360,30 @@
 <div class="card"><h3>통독 진도 관리</h3><div id="history" class="small"></div></div>
 </section>
 </main>
+<div class="modal hidden" id="onboardModal" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
+  <div class="modal-box" style="max-width:420px">
+    <p class="eyebrow">말씀의 길</p>
+    <h2 id="onboardTitle" style="margin:6px 0 10px;color:var(--navy)">무엇을 시작하시겠어요?</h2>
+    <p class="small muted">가톨릭 성경 통독·매일미사·묵상을 위한 길잡이입니다.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button type="button" onclick="finishOnboard('plan')">통독 계획 세우기</button>
+      <button type="button" class="alt" onclick="finishOnboard('missa')">오늘의 말씀(미사) 보기</button>
+      <button type="button" class="alt" onclick="finishOnboard('notes')">묵상 노트 열기</button>
+      <button type="button" class="alt" onclick="finishOnboard('home')">그냥 둘러보기</button>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="appDialog" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+  <div class="modal-box" style="max-width:400px">
+    <h3 id="appDialogTitle" style="margin-top:0">알림</h3>
+    <p id="appDialogMessage" style="line-height:1.55"></p>
+    <div class="row" style="margin-top:14px;justify-content:flex-end;gap:8px">
+      <button type="button" class="alt hidden" id="appDialogCancel">취소</button>
+      <button type="button" id="appDialogOk">확인</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="modal hidden" id="badgeModal" role="dialog" aria-modal="true" aria-labelledby="badgeModalTitle">
   <div class="modal-box badge-modal-box parchment-card">
@@ -408,6 +440,9 @@
     </div>
   </section>
 </div>
+<script src="/js/storage.js" defer></script>
+<script src="/js/data.js" defer></script>
+<script src="/js/badges.js" defer></script>
 <script src="/js/app.js" defer></script>
 </body>
 </html>

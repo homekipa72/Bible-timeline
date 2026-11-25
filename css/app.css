@@ -272,3 +272,13 @@ body.focus-read #bibleText{font-size:inherit}
 body:not(.read-mode) .read-typebar{display:none}
 .badge-card.badge-book{min-height:120px;padding:12px 8px}
 .badge-card.badge-book .badge-name{font-size:12px}
+
+#onboardModal .modal-box button{width:100%}
+
+.badge-svg{display:grid;place-items:center;width:40px;height:40px;color:var(--muted)}
+.badge-svg.on{color:var(--navy)}
+.badge-svg svg{width:40px;height:40px;display:block}
+.badge-ico{background:transparent !important;border:none !important;box-shadow:none !important;width:auto !important;height:auto !important}
+.badge-card.unlocked .badge-ico{box-shadow:none !important}
+#badgeModalIcon{display:grid;place-items:center}
+#badgeModalIcon .badge-svg svg{width:56px;height:56px}

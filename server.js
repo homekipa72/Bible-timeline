@@ -16,7 +16,11 @@ const files = new Map([
   ['/sw.js', ['sw.js', 'application/javascript; charset=utf-8']],
   ['/manifest.webmanifest', ['manifest.webmanifest', 'application/manifest+json; charset=utf-8']],
   ['/css/app.css', ['css/app.css', 'text/css; charset=utf-8']],
+  ['/js/storage.js', ['js/storage.js', 'application/javascript; charset=utf-8']],
+  ['/js/data.js', ['js/data.js', 'application/javascript; charset=utf-8']],
+  ['/js/badges.js', ['js/badges.js', 'application/javascript; charset=utf-8']],
   ['/js/app.js', ['js/app.js', 'application/javascript; charset=utf-8']],
+  ['/js/vendor/chart.umd.min.js', ['js/vendor/chart.umd.min.js', 'application/javascript; charset=utf-8']],
 ]);
 const iconTypes = { '.svg': 'image/svg+xml', '.png': 'image/png' };
 

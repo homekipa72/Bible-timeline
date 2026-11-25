@@ -4,6 +4,7 @@ const LIST_URL = 'https://maria.catholic.or.kr/mobile/missa/missa_list.asp';
 const VIEW_URL = 'https://maria.catholic.or.kr/mobile/missa/missa_view.asp';
 const SOURCE_URL = 'https://maria.catholic.or.kr/mobile/missa/missa_list.asp';
 const USER_AGENT = 'MalssumgilDailyMassReader/1.0';
+const FETCH_TIMEOUT_MS = 12000;
 const SECTION_LABELS = new Set([
   '오늘 전례', '입당송', '본기도', '제1독서', '제2독서', '화답송',
   '복음 환호송', '복음', '예물기도', '영성체송', '영성체 후 묵상',
@@ -105,7 +106,8 @@ function parseSections(html) {
 
 async function fetchList() {
   const response = await fetch(LIST_URL, {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' }
+    headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
   if (!response.ok) throw new Error('매일미사 목록 응답 오류 (' + response.status + ')');
   const html = await response.text();
@@ -124,7 +126,8 @@ function seoulDate() {
 
 async function findToday(items) {
   const response = await fetch(VIEW_URL + '?today=on', {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' }
+    headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml' },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
   if (!response.ok) throw new Error('오늘의 미사 날짜 확인 오류 (' + response.status + ')');
   const html = await response.text();
@@ -145,7 +148,8 @@ async function fetchMass(item) {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       Referer: LIST_URL
     },
-    body
+    body,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   });
   if (!response.ok) throw new Error('선택한 날짜의 매일미사 응답 오류 (' + response.status + ')');
   const html = await response.text();
@@ -161,13 +165,25 @@ async function fetchMass(item) {
   };
 }
 
+function allowOrigin(req, res) {
+  const origin = req.headers && (req.headers.origin || req.headers.Origin);
+  if (!origin) return;
+  try {
+    const host = req.headers.host || '';
+    const originHost = new URL(origin).host;
+    if (host && originHost === host) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    }
+  } catch (_) {}
+}
+
 module.exports = async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
+  allowOrigin(req, res);
   res.setHeader('X-Missa-Source', SOURCE_URL);
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(204).end();
   }
   if (req.method && req.method !== 'GET') {
@@ -179,6 +195,8 @@ module.exports = async function handler(req, res) {
     const items = await fetchList();
     const active = await findToday(items);
     if (query.list === '1') {
+      // 목록: CDN/엣지 5분 캐시
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       return res.status(200).json({ items: publicItems(items), activeDate: active ? active.date : null, sourceUrl: SOURCE_URL });
     }
 
@@ -191,9 +209,22 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: '이 날짜는 원문 목록에서 찾을 수 없습니다.' });
     }
     const mass = await fetchMass(item);
+    // 본문: 1시간 캐시 (날짜별 고정 콘텐츠)
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json({ mass, items: publicItems(items), activeDate: active ? active.date : null, sourceUrl: SOURCE_URL });
   } catch (error) {
     console.error('Daily Mass request failed:', error);
-    return res.status(502).json({ error: '매일미사를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.' });
+    const timedOut = error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+    return res.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? '매일미사 원문 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.'
+        : '매일미사를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+    });
   }
 };
+
+// 테스트·재사용용 파서 노출 (Vercel 핸들러는 module.exports 함수 유지)
+module.exports.parseMassItems = parseMassItems;
+module.exports.parseSections = parseSections;
+module.exports.htmlText = htmlText;
+module.exports.SECTION_LABELS = SECTION_LABELS;

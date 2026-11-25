@@ -1,10 +1,25 @@
 // Vercel Serverless Function: /api/bible?book=Gn&chapter=1
 // Proxies official Korean Catholic Bible (CBCK) HTML for offline caching in the app.
 
+const FETCH_TIMEOUT_MS = 12000;
+
+function allowOrigin(req, res) {
+  const origin = req.headers && (req.headers.origin || req.headers.Origin);
+  if (!origin) return; // same-origin / non-browser
+  try {
+    const host = req.headers.host || '';
+    const originHost = new URL(origin).host;
+    if (host && originHost === host) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    }
+  } catch (_) {}
+}
+
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  allowOrigin(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -26,7 +41,8 @@ module.exports = async function handler(req, res) {
       headers: {
         'User-Agent': 'MalssumgilBibleReader/1.0 (Catholic Bible reading app)',
         Accept: 'text/html,application/xhtml+xml'
-      }
+      },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     });
     if (!upstream.ok) {
       return res.status(upstream.status).json({
@@ -39,8 +55,11 @@ module.exports = async function handler(req, res) {
     res.setHeader('X-Bible-Source', 'https://bible.cbck.or.kr/Knb');
     return res.status(200).send(html);
   } catch (error) {
-    return res.status(502).json({
-      error: 'Could not retrieve the official Bible text.',
+    const timedOut = error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+    return res.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? 'Official Bible site did not respond in time.'
+        : 'Could not retrieve the official Bible text.',
       detail: String((error && error.message) || error)
     });
   }

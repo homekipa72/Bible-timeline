@@ -1,0 +1,158 @@
+:root{
+  --navy:#172b43;--gold:#b99a61;--ink:#283342;--line:#e9e4d9;
+  --bg:#f7f4ed;--surface:#fffefa;--card:#ffffff;--muted:#78818a;
+  --paper:#ffffff;--alt-btn:#eee9df;--progress-bg:#eee9df;
+  --focus:#b99a61;--aside-text:#d5dbe1;--brand:#e6d3a7;--brand-sub:#c8d0d8;
+  --danger:#9f3434;--notice-bg:#f8f2e5;--read-bg:#edf4ee;--sel-bg:#fff3d6;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif}
+.app{max-width:1160px;margin:auto;min-height:100vh;display:grid;grid-template-columns:220px 1fr;background:var(--surface)}
+aside{background:var(--navy);color:white;padding:22px 15px;display:flex;flex-direction:column;gap:14px}
+.brand{font:25px Georgia;color:var(--brand)}.brand small{display:block;font:11px sans-serif;letter-spacing:2px;color:var(--brand-sub);margin-top:5px}
+.nav button{display:block;width:100%;text-align:left;background:none;color:var(--aside-text);border:0;padding:12px;border-radius:8px;cursor:pointer}
+.nav .active,.nav button:hover,.nav button[aria-current="page"]{background:#ffffff1c;color:white}
+main{padding:26px;min-width:0}.eyebrow{color:var(--gold);font-size:12px;letter-spacing:2px}
+.h1{font:30px Georgia;color:var(--navy);margin:5px 0 15px}.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{font:28px Georgia;color:var(--navy);margin-top:7px}
+.progress{height:8px;background:var(--progress-bg);border-radius:9px;overflow:hidden;margin-top:10px}.progress span{display:block;height:100%;background:var(--gold)}
+button{background:var(--navy);color:white;border:0;border-radius:9px;padding:10px 13px;cursor:pointer}
+button.alt{background:var(--alt-btn);color:var(--navy)}button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--card);color:var(--ink)}
+textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.hidden{display:none!important}.reader{display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:12px}
+.paper{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(14px,3vw,32px);min-height:560px;overflow:auto}
+.paper canvas{max-width:100%;height:auto;display:block;margin:auto}
+.textpage{white-space:pre-wrap;text-align:justify;line-height:2.05;overflow-wrap:anywhere}
+.notice{background:var(--notice-bg);border-left:3px solid var(--gold);padding:12px;border-radius:7px;font-size:13px;line-height:1.7}
+.missa-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.missa-toolbar select{flex:1;min-width:190px}
+.missa-reading h3{color:var(--navy);margin:0 0 10px;font-size:17px}
+.missa-reading .textpage{text-align:left;line-height:1.9;margin:0;font-size:16px}
+.missa-title{font-size:22px;color:var(--navy);margin:0 0 6px}
+.missa-status{min-height:24px}
+.missa-status.error{color:var(--danger)}
+.alt.on{background:var(--gold);color:#fff}
+.small{font-size:12px;line-height:1.7;color:var(--muted)}.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.toolbar label{font-size:13px}.toolbar select{padding:8px}
+.bookgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:260px;overflow:auto}
+.bookgrid button{background:#f5f2eb;color:#283342;text-align:left;font-size:12px}
+.bookgrid button:hover{outline:1px solid #b99a61}
+.chaptergrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:7px;margin-top:12px}
+.chaptergrid button,.verse-list button{background:#f5f2eb;color:#283342}
+.chaptergrid button.selected,.verse-list button.done{background:var(--navy);color:white}
+.bible-verses{font-size:18px;line-height:2.05;overflow-wrap:anywhere}.bible-verse .words{line-height:inherit}.bible-verse{display:flex;gap:12px;padding:10px 8px;border-bottom:1px solid var(--line);border-radius:7px;cursor:pointer}.bible-verse:hover{background:#f8f5ef}.bible-verse.read{background:#edf4ee}.bible-verse .num{flex:0 0 28px;color:var(--gold);font-weight:700;font-size:.85em;padding-top:3px}.bible-verse.read .num:after{content:" ✓";color:#2d7650}.bible-verse .words{flex:1;white-space:pre-wrap}
+.verse-note-action{flex:0 0 auto;align-self:center;padding:6px 9px!important;background:transparent!important;color:#526174!important;border:1px solid var(--line)!important;font-size:12px!important;white-space:nowrap}
+.verse-note-action:hover{border-color:var(--gold)!important;color:var(--navy)!important;background:#f8f2e5!important}
+.chaptergrid button.part{background:#ece3cd}.chaptergrid button.done{background:#cfe0d3;color:#172b43}.chaptergrid button.selected{outline:2px solid var(--gold)}.fn{font-size:.62em;color:#9aa0a6;margin-left:1px;vertical-align:super;line-height:0}
+.verse-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.verse-list button{min-width:42px}.verse-list button.done:before{content:"✓ "}
+
+/* 구절 복사 · 알림 토스트 */
+.bible-verse.sel{background:#fff3d6;outline:1px solid var(--gold)}
+.bible-verse.sel .num:after{content:" ●";color:var(--gold)}
+.copybar{position:fixed;z-index:45;background:#fffefaf5;backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 -2px 16px #00000026;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;left:50%;transform:translateX(-50%);bottom:12px;width:min(680px,calc(100% - 24px));border-radius:12px}
+.copybar button{padding:8px 12px;font-size:13px}
+.copybar .cnt{font-weight:600;color:var(--navy);flex:1;min-width:84px}
+body.copy-mode .read-dock{display:none!important}
+body.copy-mode main{padding-bottom:130px}
+#copyModeBtn.on{background:var(--gold);color:#fff}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#172b43ee;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:90;max-width:88vw;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.chip{padding:6px 12px;font-size:13px;border-radius:999px}.chip.on{background:var(--navy);color:#fff}
+.noteday{font-size:12px;color:var(--gold);letter-spacing:1px;margin:14px 0 6px;font-weight:700}
+/* 공유 카드 모달 */
+.modal{position:fixed;inset:0;background:#000000a6;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px}
+.modal-box{background:#fffefa;border-radius:14px;padding:14px;max-width:460px;width:100%;max-height:96vh;overflow:auto}
+#cardCanvas{width:100%;height:auto;border-radius:8px;display:block;margin:10px 0;box-shadow:0 2px 14px #00000033}
+/* 하단 탭 · 읽기 고정 바 */
+.bottom-nav{display:none}
+.read-dock{display:none}
+.quick-reflect{margin-top:12px}
+@media(max-width:760px){
+  .app{display:block;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+  aside{padding:12px 14px;position:sticky;top:0;z-index:5}
+  aside .nav{display:none}
+  .brand{font-size:20px}
+  .bottom-nav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:var(--navy);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+    justify-content:space-around;gap:2px;box-shadow:0 -4px 20px #00000033
+  }
+  .bottom-nav button{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;background:none;border:0;color:#9aa3ad;padding:8px 2px;font-size:10px;
+    line-height:1.2;border-radius:8px;min-height:48px
+  }
+  .bottom-nav button .ico{font-size:16px;line-height:1}
+  .bottom-nav button.active,.bottom-nav button:hover{color:#e6d3a7;background:#ffffff14}
+  .copybar{bottom:calc(56px + env(safe-area-inset-bottom,0px));width:100%;border-radius:0;border-left:0;border-right:0}
+  .toast{bottom:150px}
+  .grid{grid-template-columns:1fr 1fr}
+  main{padding:14px 14px 24px}.reader{grid-template-columns:1fr}
+  .paper{min-height:320px;padding-bottom:88px}
+  .bookgrid{grid-template-columns:repeat(2,1fr)}
+  .read-dock{
+    display:flex;position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));
+    z-index:35;background:#fffefaee;backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);padding:8px 10px;gap:8px;justify-content:center;
+    box-shadow:0 -2px 12px #00000014
+  }
+  .read-dock button{flex:1;max-width:140px;padding:12px 10px;font-size:14px}
+  body.read-mode .bottom-nav{opacity:0.97}
+}
+@media(min-width:761px){
+  .read-dock{display:none !important}
+}
+
+
+/* Skip link & focus */
+.skip-link{position:absolute;left:-999px;top:8px;z-index:1000;background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none}
+.skip-link:focus{left:8px;outline:3px solid var(--focus);outline-offset:2px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+button:focus:not(:focus-visible),a:focus:not(:focus-visible),select:focus:not(:focus-visible),input:focus:not(:focus-visible),textarea:focus:not(:focus-visible){outline:none}
+.theme-toggle{margin-top:auto;width:100%;text-align:left;background:#ffffff14;color:var(--brand);border:1px solid #ffffff22;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:13px}
+.theme-toggle:hover{background:#ffffff22}
+
+/* Dark theme (manual or system) */
+html[data-theme="dark"]{color-scheme:dark}
+html[data-theme="dark"]{
+  --navy:#9ec0e6;--gold:#d4b574;--ink:#e6e1d6;--line:#3a4250;
+  --bg:#12161c;--surface:#171c24;--card:#1e2530;--muted:#9aa3ad;
+  --paper:#1a212c;--alt-btn:#2a3340;--progress-bg:#2a3340;
+  --focus:#d4b574;--aside-text:#c5ced8;--brand:#e6d3a7;--brand-sub:#a8b3bf;
+  --danger:#f0a0a0;--notice-bg:#2a2418;--read-bg:#1a2a22;--sel-bg:#3a3220;
+}
+html[data-theme="dark"] aside{background:#0f141b}
+html[data-theme="dark"] .nav .active,html[data-theme="dark"] .nav button[aria-current="page"],html[data-theme="dark"] .nav button:hover{background:#ffffff18}
+html[data-theme="dark"] button{background:#2d4a6f;color:#f2f5f8}
+html[data-theme="dark"] button.alt{background:var(--alt-btn);color:var(--ink)}
+html[data-theme="dark"] .bible-verse:hover{background:#243040}
+html[data-theme="dark"] .bible-verse.read{background:var(--read-bg)}
+html[data-theme="dark"] .bible-verse.sel{background:var(--sel-bg)}
+html[data-theme="dark"] .bottom-nav{background:#0f141bee;border-top-color:var(--line)}
+html[data-theme="dark"] .read-dock{background:#171c24ee;border-top-color:var(--line)}
+html[data-theme="dark"] .modal{background:#000000aa}
+html[data-theme="dark"] .modal-box{background:var(--card);color:var(--ink)}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]){color-scheme:dark}
+  html:not([data-theme="light"]){
+    --navy:#9ec0e6;--gold:#d4b574;--ink:#e6e1d6;--line:#3a4250;
+    --bg:#12161c;--surface:#171c24;--card:#1e2530;--muted:#9aa3ad;
+    --paper:#1a212c;--alt-btn:#2a3340;--progress-bg:#2a3340;
+    --focus:#d4b574;--aside-text:#c5ced8;--brand:#e6d3a7;--brand-sub:#a8b3bf;
+    --danger:#f0a0a0;--notice-bg:#2a2418;--read-bg:#1a2a22;--sel-bg:#3a3220;
+  }
+  html:not([data-theme="light"]) aside{background:#0f141b}
+  html:not([data-theme="light"]) button{background:#2d4a6f;color:#f2f5f8}
+  html:not([data-theme="light"]) button.alt{background:var(--alt-btn);color:var(--ink)}
+  html:not([data-theme="light"]) .bible-verse.read{background:var(--read-bg)}
+  html:not([data-theme="light"]) .bible-verse.sel{background:var(--sel-bg)}
+  html:not([data-theme="light"]) .bottom-nav{background:#0f141bee}
+  html:not([data-theme="light"]) .read-dock{background:#171c24ee}
+  html:not([data-theme="light"]) .modal{background:#000000aa}
+  html:not([data-theme="light"]) .modal-box{background:var(--card)}
+}

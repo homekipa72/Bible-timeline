@@ -15,7 +15,8 @@ const files = new Map([
   ['/index.html', ['index.html', 'text/html; charset=utf-8']],
   ['/sw.js', ['sw.js', 'application/javascript; charset=utf-8']],
   ['/manifest.webmanifest', ['manifest.webmanifest', 'application/manifest+json; charset=utf-8']],
-  ['/manus-routes.json', ['manus-routes.json', 'application/json; charset=utf-8']],
+  ['/css/app.css', ['css/app.css', 'text/css; charset=utf-8']],
+  ['/js/app.js', ['js/app.js', 'application/javascript; charset=utf-8']],
 ]);
 const iconTypes = { '.svg': 'image/svg+xml', '.png': 'image/png' };
 

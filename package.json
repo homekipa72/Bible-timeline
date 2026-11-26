@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "dev:vercel": "vercel dev",
-    "test": "node test/missa-parse.test.js && node test/extract-verses.test.js && node test/schedule-range.test.js",
+    "test": "node test/missa-parse.test.js && node test/extract-verses.test.js && node test/schedule-range.test.js && node test/completed-plan-recovery.test.js",
     "check:cache": "node -e \"const fs=require('fs');const m=fs.readFileSync('sw.js','utf8').match(/CACHE_VERSION\\s*=\\s*['\\\"]([^'\\\"]+)/);if(!m){console.error('CACHE_VERSION not found');process.exit(1)};console.log('CACHE_VERSION='+m[1]);\"",
     "predeploy": "npm test && npm run check:cache",
     "deploy": "npm run predeploy && vercel --prod"

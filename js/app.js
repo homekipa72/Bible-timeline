@@ -32,6 +32,7 @@ function persistCompletedPlans(){store.completedPlans_v1=JSON.stringify(complete
 let verseShelf=jget('verseShelf_v1',[],Array.isArray);
 function persistVerseShelf(){store.verseShelf_v1=JSON.stringify(verseShelf)}
 function archiveIfComplete(id){const p=savedPlans.find(x=>x.id===id);if(!p)return;const pr=planProgress(p);if(pr.total&&pr.done===pr.total){if(!completedPlans.some(x=>x.id===id)){completedPlans.push({...p,completedAt:new Date().toISOString()});persistCompletedPlans()}savedPlans=savedPlans.filter(x=>x.id!==id);persistPlans();if(activePlanId===id)setActivePlan(savedPlans[0]?.id||'')}}
+function recoverCompletedPlans(){savedPlans.slice().forEach(p=>archiveIfComplete(p.id))}
 
 let activePlanId=store.activePlanId||'';
 let editingPlanId='';
@@ -269,6 +270,9 @@ let notes=jget('notes',[],Array.isArray),days=+(store.days||365),start=store.sta
 let verseTotal=jget('verseTotal_v1',{},isPlainObj);let verseRead=jget('verseRead_v1',{},isPlainObj),chapterRead=jget('chapterRead_v1',{},isPlainObj),selectedBook=0,selectedChapter=1,currentVerses=[],chapterCache={};
 if(store.planReadingMigrated_v1!=='1'){const legacyPlan=savedPlans.find(p=>p.id===activePlanId)||savedPlans[0];if(legacyPlan&&Object.keys(chapterRead).length){planReadingState[legacyPlan.id]={chapters:{...chapterRead},verses:{...verseRead}};savePlanReadingState()}store.planReadingMigrated_v1='1'}
 backfillCumulative();
+// 새로고침 직전에 통독 완료 처리가 발생해 setTimeout이 실행되지 못한 경우,
+// 저장된 진도를 기준으로 완료 계획을 복구합니다. archiveIfComplete는 중복 이력도 방지합니다.
+recoverCompletedPlans();
 $('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 $('days').value=days;$('start').value=start;$('ndate').value=new Date().toISOString().slice(0,10);
 try{ refreshReadBookSelect(); }catch(e){ $('verseBook').innerHTML=books.map((b,n)=>'<option value="'+n+'">'+b[0]+'</option>').join(''); }

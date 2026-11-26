@@ -381,3 +381,27 @@ body:not(.read-mode) .read-typebar{display:none}
 #home #homePlanShortcut.hidden{
   display: none !important;
 }
+
+/* ===== WCAG 2.2 보완 ===== */
+html{
+  scroll-padding-top: 72px;
+  scroll-padding-bottom: 88px;
+}
+.chaptergrid button{
+  min-width: 40px;
+  min-height: 40px;
+}
+.bottom-nav button,
+.read-dock button{
+  min-height: 44px;
+}
+.read-today-block{
+  margin-bottom: 4px;
+}
+.read-today-list button.is-done{
+  opacity: 0.75;
+}
+.read-backlog-details summary:focus-visible{
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}

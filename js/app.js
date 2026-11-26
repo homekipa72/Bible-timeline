@@ -849,62 +849,65 @@ function renderReadPlanPreview(){
   }
   const pr=planProgress(p);
   if(meta) meta.innerHTML='<b style="color:var(--navy)">'+safe(p.name)+'</b> · '+pr.done+'/'+pr.total+' ('+pr.pct+'%) · '+safe(pr.status);
-  // 일정(일) 기준 미리보기: 완료/미완료 일차 요약 + 책별
-  const seq=pr.seq;
-  const days=p.days||1;
-  let dayHtml='';
-  // 요청 범위: 밀린 일정, 오늘, 내일만 표시.
-  const cur=dayIndexForPlan(p);
-  const from=Math.max(1, cur-1);
-  const to=Math.min(days, cur+1);
+
+  let html='';
+
+  // 여유 모드 안내 (일정 미리보기 없음)
   if(p.catchUp==='follow'){
     const left=pr.total-pr.done-pr.skipped;
-    dayHtml+='<div class="notice" style="margin-bottom:8px">남은 <b>'+Math.max(0,left)+'</b>개를 남은 기간에 자동으로 나눠 읽는 방식입니다. 오늘 분량은 하루 동안 고정됩니다.</div>';
+    html+='<div class="notice" style="margin-bottom:10px">남은 <b>'+Math.max(0,left)+'</b>개를 남은 기간에 자동으로 나눕니다. 오늘 분량은 하루 동안 고정됩니다.</div>';
+  }
+
+  // 오늘 분량 — 예전 일정 미리보기 자리
+  const today=todayItemsForPlan(p);
+  html+='<div class="read-today-block">';
+  html+='<div class="small" style="margin:0 0 6px;font-weight:600;color:var(--navy)">오늘 분량'+(today.length?' · '+today.filter(x=>x.done).length+'/'+today.length:'')+'</div>';
+  if(today.length){
+    html+='<div class="read-today-list">'+today.map(it=>
+      '<button type="button" class="alt'+(it.done?' is-done':'')+'" style="margin:3px 4px 3px 0" onclick="selectBook('+it.book+');selectChapter('+it.chapter+');renderReadPlanPreview()">'+
+      safe(it.label)+(it.done?' ✓':'')+'</button>'
+    ).join('')+'</div>';
   } else {
-  dayHtml+='<details open style="margin-bottom:8px"><summary class="small" style="cursor:pointer;font-weight:600">일정 미리보기 · 밀림/오늘/내일</summary><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">';
-  for(let d=from;d<=to;d++){
-    const a=Math.floor((d-1)*seq.length/days);
-    const z=Math.max(a+1, Math.floor(d*seq.length/days));
-    let allDone=true, any=false;
-    for(let i=a;i<Math.min(z,seq.length);i++){
-      any=true;
-      if(!planChapterDone(p.id,verseKey(seq[i].book,seq[i].chapter))) allDone=false;
-    }
-    const isToday=d===cur;
-    const bg=allDone&&any?'var(--ok-bg)':(isToday?'var(--today-bg)':'var(--soft-2)');
-    const border=allDone&&any?'var(--ok-border)':(isToday?'var(--gold)':'var(--line)');
-    dayHtml+='<span style="padding:4px 8px;border-radius:6px;border:1px solid '+border+';background:'+bg+';font-size:12px">'+d+'일'+(allDone&&any?' ✓':'')+(isToday?' ·오늘':'')+'</span>';
+    html+='<p class="small muted" style="margin:0">오늘 배정된 분량이 없습니다.</p>';
   }
-  dayHtml+='</div>';
+  html+='</div>';
+
+  // 밀린 분량 — 클릭(접기/펼치기)으로 상세
+  if(pr.backlog && pr.backlog.length){
+    html+='<details class="read-backlog-details" style="margin-top:12px">';
+    html+='<summary class="small" style="cursor:pointer;font-weight:600;color:#9a5b00">밀린 분량 '+pr.backlog.length+'개 · 자세히</summary>';
+    html+='<div class="read-backlog-list" style="margin-top:8px">';
+    html+=pr.backlog.map(it=>
+      '<button type="button" class="alt" style="margin:3px 4px 3px 0;border:1px solid #e0b77a" onclick="selectBook('+it.book+');selectChapter('+it.chapter+');renderReadPlanPreview()">'+
+      safe(it.label)+'</button>'
+    ).join('');
+    html+='</div>';
+    html+='<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">';
+    html+='<button type="button" class="alt" style="padding:7px 10px;font-size:13px" onclick="readBacklog(\''+p.id+'\')">밀린 분량부터 읽기</button>';
+    html+='<button type="button" class="alt" style="padding:7px 10px;font-size:13px" onclick="setCatchUp(\''+p.id+'\',\'follow\')">남은 기간에 다시 배분</button>';
+    html+='<button type="button" class="alt" style="padding:7px 10px;font-size:13px" onclick="skipBacklog(\''+p.id+'\')">건너뛰기</button>';
+    html+='</div></details>';
   }
-  if(pr.backlog.length){
-    dayHtml+='<div class="small" style="margin:12px 0 6px;color:#9a5b00"><b>밀린 분량 '+pr.backlog.length+'개</b></div>'+
-      pr.backlog.slice(0,12).map(it=>'<button type="button" class="alt" style="margin:3px 4px 3px 0;border:1px solid #e0b77a" onclick="selectBook('+it.book+');selectChapter('+it.chapter+');renderReadPlanPreview()">'+it.label+'</button>').join('')+
-      (pr.backlog.length>12?'<span class="small muted"> 외 '+(pr.backlog.length-12)+'개</span>':'');
-  }
-  if(p.catchUp!=='follow')dayHtml+='</details>';
-  else dayHtml='<details open style="margin-bottom:8px"><summary class="small" style="cursor:pointer;font-weight:600">일정 미리보기 · 밀림/오늘/내일</summary>'+dayHtml+'</details>';
-  // 책별 완료/미완료
+
+  // 책별 진도
+  const seq=pr.seq||[];
   const byBook=new Map();
   for(const it of seq){
     if(!byBook.has(it.book)) byBook.set(it.book,{done:0,total:0});
     const o=byBook.get(it.book); o.total++;
     if(planChapterDone(p.id,verseKey(it.book,it.chapter))) o.done++;
   }
-  let bookHtml='<details style="margin-top:8px"><summary class="small" style="cursor:pointer;font-weight:600">책별 진도</summary><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:8px">';
-  for(const [bi,o] of [...byBook.entries()].sort((a,b)=>a[0]-b[0])){
-    const done=o.done>=o.total;
-    bookHtml+='<div style="padding:8px;border-radius:8px;border:1px solid '+(done?'var(--ok-border)':'var(--line)')+';background:'+(done?'var(--ok-bg)':'var(--soft)')+';font-size:12px"><b>'+safe(books[bi][0])+'</b><div class="muted">'+o.done+'/'+o.total+(done?' · 완료':' · 미완료')+'</div></div>';
+  if(byBook.size){
+    html+='<details style="margin-top:10px"><summary class="small" style="cursor:pointer;font-weight:600">책별 진도</summary>';
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:8px">';
+    for(const [bi,o] of [...byBook.entries()].sort((a,b)=>a[0]-b[0])){
+      const done=o.done>=o.total;
+      html+='<div style="padding:8px;border-radius:8px;border:1px solid '+(done?'var(--ok-border)':'var(--line)')+';background:'+(done?'var(--ok-bg)':'var(--soft)')+';font-size:12px"><b>'+safe(books[bi][0])+'</b><div class="muted">'+o.done+'/'+o.total+(done?' · 완료':' · 미완료')+'</div></div>';
+    }
+    html+='</div></details>';
   }
-  bookHtml+='</div></details>';
-  // 오늘 분량
-  const today=todayItemsForPlan(p);
-  let todayHtml='';
-  if(today.length){
-    todayHtml='<div class="small" style="margin:12px 0 6px"><b>오늘 분량</b></div>';
-    todayHtml+=today.map(it=>'<button type="button" class="alt" style="margin:3px 4px 3px 0" onclick="selectBook('+it.book+');selectChapter('+it.chapter+');renderReadPlanPreview()">'+it.label+(it.done?' ✓':'')+'</button>').join('');
-  }
-  box.innerHTML=dayHtml+todayHtml+bookHtml;
+
+  box.innerHTML=html;
 }
 function preview(){days=effectiveDays();start=$('start').value||start;let r=dailyRange(),first=flatChapter(r.a),last=flatChapter(Math.min(totalChapters()-1,r.z-1));
 let periodHtml='';

@@ -4,7 +4,7 @@
  * - 매일미사(/api/missa)는 원문에서 실시간 조회하며 저장하지 않습니다.
  * - 앱 파일을 바꿀 때는 CACHE_VERSION 숫자를 올리면 이전 캐시가 정리됩니다.
  */
-const CACHE_VERSION = 'v17';
+const CACHE_VERSION = 'v18';
 const CACHE_NAME = 'malssumgil-shell-' + CACHE_VERSION;
 const CHART_URL = '/js/vendor/chart.umd.min.js';
 const SHELL = [

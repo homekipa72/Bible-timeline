@@ -2,26 +2,39 @@
 'use strict';
 /* ===== 통독 인증 배지 ===== */
 
-const BADGE_SVG={
-  all:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 28h24v16H20z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 28v-4c0-4 16-4 16 0v4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 22v6M29 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-  ot:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14 42c8-14 28-14 36 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 18v8M28 22h8" stroke="currentColor" stroke-width="2"/><circle cx="40" cy="20" r="2" fill="currentColor"/></svg>',
-  nt:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 20c6 0 10 5 10 10-2 8-10 14-10 14s-8-6-10-14c0-5 4-10 10-10z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M26 30h12" stroke="currentColor" stroke-width="1.5"/></svg>',
-  chrono:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="32" cy="32" r="14" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 24v8l6 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-  pentateuch:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><rect x="18" y="22" width="12" height="22" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="34" y="22" width="12" height="22" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 30h4M22 36h4M38 30h4M38 36h4" stroke="currentColor" stroke-width="1.5"/></svg>',
-  history:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 40h32M20 40V28l12-8 12 8v12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M28 40v-8h8v8" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  wisdom:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 36c0-8 6-14 10-14s10 6 10 14c-4 0-7 2-10 2s-6-2-10-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 22v4M26 40h12" stroke="currentColor" stroke-width="2"/></svg>',
-  prophets:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 42c0-6 4-8 4-14a4 4 0 10-8 0c0 6 4 8 4 14z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M28 42h8" stroke="currentColor" stroke-width="2"/></svg>',
-  gospels:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 16v32M20 28h24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
-  acts:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 18c8 6 12 12 12 20a12 12 0 11-24 0c0-8 4-14 12-20z" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  epistles:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><rect x="16" y="24" width="32" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 28l16 10 16-10" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  revelation:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 18l2.5 7.5H42l-6 5 2.5 8L32 33l-6.5 5.5 2.5-8-6-5h7.5z" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  book:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20h10c4 0 6 2 6 6v18c-2-2-4-3-6-3H20V20zm24 0H34c-4 0-6 2-6 6v18c2-2 4-3 6-3h10V20z" fill="none" stroke="currentColor" stroke-width="2"/></svg>'
+/* 아이콘 본체(바깥 원 제외). 페이지에 <symbol> 스프라이트로 한 번만 넣고 카드는 <use>로 참조합니다.
+ * 색은 모두 currentColor — CSS(.badge-svg / 인라인 color)로 바꿉니다. */
+const BADGE_ICON_PATHS={
+  all:'<path d="M20 28h24v16H20z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 28v-4c0-4 16-4 16 0v4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 22v6M29 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  ot:'<path d="M14 42c8-14 28-14 36 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 18v8M28 22h8" stroke="currentColor" stroke-width="2"/><circle cx="40" cy="20" r="2" fill="currentColor"/>',
+  nt:'<path d="M32 20c6 0 10 5 10 10-2 8-10 14-10 14s-8-6-10-14c0-5 4-10 10-10z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M26 30h12" stroke="currentColor" stroke-width="1.5"/>',
+  chrono:'<circle cx="32" cy="32" r="14" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 24v8l6 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  pentateuch:'<rect x="18" y="22" width="12" height="22" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="34" y="22" width="12" height="22" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 30h4M22 36h4M38 30h4M38 36h4" stroke="currentColor" stroke-width="1.5"/>',
+  history:'<path d="M16 40h32M20 40V28l12-8 12 8v12" fill="none" stroke="currentColor" stroke-width="2"/><path d="M28 40v-8h8v8" fill="none" stroke="currentColor" stroke-width="2"/>',
+  wisdom:'<path d="M22 36c0-8 6-14 10-14s10 6 10 14c-4 0-7 2-10 2s-6-2-10-2z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M32 22v4M26 40h12" stroke="currentColor" stroke-width="2"/>',
+  prophets:'<path d="M32 42c0-6 4-8 4-14a4 4 0 10-8 0c0 6 4 8 4 14z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M28 42h8" stroke="currentColor" stroke-width="2"/>',
+  gospels:'<path d="M32 16v32M20 28h24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
+  acts:'<path d="M32 18c8 6 12 12 12 20a12 12 0 11-24 0c0-8 4-14 12-20z" fill="none" stroke="currentColor" stroke-width="2"/>',
+  epistles:'<rect x="16" y="24" width="32" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 28l16 10 16-10" fill="none" stroke="currentColor" stroke-width="2"/>',
+  revelation:'<path d="M32 18l2.5 7.5H42l-6 5 2.5 8L32 33l-6.5 5.5 2.5-8-6-5h7.5z" fill="none" stroke="currentColor" stroke-width="2"/>',
+  book:'<path d="M20 20h10c4 0 6 2 6 6v18c-2-2-4-3-6-3H20V20zm24 0H34c-4 0-6 2-6 6v18c2-2 4-3 6-3h10V20z" fill="none" stroke="currentColor" stroke-width="2"/>'
 };
+const BADGE_SPRITE_ID='badgeSprite';
+function ensureBadgeSprite(){
+  if(typeof document==='undefined'||!document.body) return;
+  if(document.getElementById(BADGE_SPRITE_ID)) return;
+  let h='<svg id="'+BADGE_SPRITE_ID+'" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden"><defs>'+
+    '<symbol id="bi-ring" viewBox="0 0 64 64"><circle cx=\"32\" cy=\"32\" r=\"29\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/></symbol>';
+  for(const k in BADGE_ICON_PATHS) h+='<symbol id="bi-'+k+'" viewBox="0 0 64 64"><use href="#bi-ring"/>'+BADGE_ICON_PATHS[k]+'</symbol>';
+  h+='</defs></svg>';
+  document.body.insertAdjacentHTML('afterbegin',h);
+}
 function badgeIconHtml(def, unlocked){
-  const key = def.bookIndex!=null ? 'book' : def.id;
-  const svg = BADGE_SVG[key] || BADGE_SVG.book;
+  ensureBadgeSprite();
+  let key = def.bookIndex!=null ? 'book' : def.id;
+  if(!BADGE_ICON_PATHS[key]) key='book';
   const cls = unlocked ? 'badge-svg on' : 'badge-svg';
-  return '<span class="'+cls+'" style="'+(def.accent&&unlocked?'color:'+def.accent:'')+'">'+svg+'</span>';
+  return '<span class="'+cls+'" style="'+(def.accent&&unlocked?'color:'+def.accent:'')+'"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#bi-'+key+'"/></svg></span>';
 }
 
 const BADGE_DEFS=[

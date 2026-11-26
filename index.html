@@ -96,12 +96,12 @@
   <div id="readPlanPreview" style="margin-top:12px"></div>
 </div>
 
-<details class="card read-select-card" id="readSelectCard" open>
-  <summary class="read-select-summary">
-    <span>성경 본문 선택</span>
+<div class="card read-select-card" id="readSelectCard">
+  <div class="read-select-heading">
+    <h3 style="margin:0">성경 본문 선택</h3>
     <span class="small muted" id="readSelectSummaryMeta">책 · 장</span>
-  </summary>
-  <p class="small muted" id="readScopeHint" style="margin:10px 0 8px">통독 계획의 범위에 해당하는 책·장만 표시됩니다. 장 번호를 누르면 본문을 봅니다.</p>
+  </div>
+  <p class="small muted" id="readScopeHint" style="margin:10px 0 8px">완료·미완료 색의 <b>장 번호</b>를 누르면 해당 본문을 자세히 봅니다.</p>
   <div class="row read-select-row">
     <label>성경 <select id="verseBook" onchange="selectBook(+this.value)"></select></label>
     <label id="chapterUnitLabel">장 <select id="verseChapter" onchange="selectChapter(+this.value)"></select></label>
@@ -111,13 +111,19 @@
     <button type="button" class="alt" id="prefetchBtn" onclick="prefetchBook()">이 책 전체 내려받기</button>
     <button type="button" class="alt" onclick="jumpToFirstUnread()" id="btnJumpUnread">안 읽은 장으로</button>
   </div>
-  <div id="chapterGrid" class="chaptergrid" role="list" aria-label="장 선택"></div>
-  <p class="small muted" id="chapterGridHint" style="margin:8px 0 0">
-    장을 누르면 본문을 자세히 볼 수 있습니다.
-    <span class="ch-legend"><i class="ch-dot done"></i>완료</span>
-    <span class="ch-legend"><i class="ch-dot part"></i>일부</span>
-    <span class="ch-legend"><i class="ch-dot todo"></i>미완료</span>
-  </p>
+  <details class="ch-grid-fold" id="chapterGridFold">
+    <summary class="ch-grid-summary">
+      <span>장 목록 (완료·미완료)</span>
+      <span class="small muted" id="chapterGridFoldMeta">펼쳐서 선택</span>
+    </summary>
+    <div id="chapterGrid" class="chaptergrid" role="list" aria-label="장 선택"></div>
+    <p class="small muted" id="chapterGridHint" style="margin:8px 0 0">
+      장 번호를 누르면 본문을 봅니다.
+      <span class="ch-legend"><i class="ch-dot done"></i>완료</span>
+      <span class="ch-legend"><i class="ch-dot part"></i>일부</span>
+      <span class="ch-legend"><i class="ch-dot todo"></i>미완료</span>
+    </p>
+  </details>
   <div class="read-progress-wrap">
     <div class="small" id="chapterProgress"></div>
     <div class="progress read-ch-progress" id="readChProgressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span style="width:0%"></span></div>
@@ -128,7 +134,7 @@
     <button type="button" class="alt" id="btnNextCh" onclick="moveChapter(1)">다음 장 →</button>
   </div>
   <div id="chapterStatus" class="small read-status" role="status">본문을 불러올 준비가 되었습니다.</div>
-</details>
+</div>
 <div class="copybar hidden" id="copyBar">
   <span class="cnt" id="copyCount">0절 선택</span>
   <label class="small" style="white-space:nowrap"><input type="checkbox" id="copyNums" checked onchange="store.copyNums=this.checked?'1':'0'"> 절 번호</label>
@@ -148,7 +154,7 @@
   <button type="button" id="btnMarkChDock" onclick="markChapter()">완료</button>
   <button type="button" class="alt" onclick="moveChapter(1)">다음</button>
 </div>
-<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="chapter-complete-bar" class="notice hidden" style="margin:10px 0"></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="chapter-complete-bar hidden" hidden></div>
 <div id="bibleText" class="bible-text" class="bible-verses"><p class="muted">성경의 책과 장을 선택하면 본문이 표시됩니다.</p></div><p class="small">절을 누르면 읽음 표시가 저장됩니다. 다시 누르면 표시가 해제됩니다. 본문은 장별로 이 기기의 브라우저에 보관됩니다.</p></div>
 <div class="reader"><div></div><div class="card"><b>읽기 메모</b><textarea id="quick" placeholder="읽으면서 떠오른 생각"></textarea><button style="margin-top:8px" onclick="quickNote()">메모 저장</button></div></div>
 <p class="small">성경 본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a>. 앱 내 본문 저장 및 이용은 승인된 사용 범위에 따라 운영합니다.</p></section>

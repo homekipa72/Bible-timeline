@@ -352,7 +352,25 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>view(b.dataset
 function db(){return new Promise((ok,no)=>{let r=indexedDB.open('malssumgil-bible',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('chapters'))r.result.createObjectStore('chapters')};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 async function cacheGet(key){try{let d=await db();return await new Promise((ok,no)=>{let r=d.transaction('chapters').objectStore('chapters').get(key);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}catch(e){return null}}
 async function cachePut(key,value){try{let d=await db();return await new Promise((ok,no)=>{let t=d.transaction('chapters','readwrite');t.objectStore('chapters').put(value,key);t.oncomplete=ok;t.onerror=()=>no(t.error);t.onabort=()=>no(t.error)})}catch(e){return null}}
-function applyTextStyle(){let el=$('bibleText');el.style.fontFamily=$('fontFamily').value;el.style.fontSize=$('fontSize').value+'px';el.style.lineHeight=$('lineHeight').value;store.fontFamily=$('fontFamily').value;store.fontSize=$('fontSize').value;store.lineHeight=$('lineHeight').value}
+function applyTextStyle(){
+  const el=$('bibleText'); if(!el) return;
+  const ff=$('fontFamily');
+  const fs=$('fontSize');
+  const lh=$('lineHeight');
+  // 설정 셀렉트가 없으면 store 값 사용
+  const family=(ff&&ff.value)||store.fontFamily||'Georgia, "Noto Serif KR", serif';
+  const size=(fs&&fs.value)||store.fontSize||'18';
+  const height=(lh&&lh.value)||store.lineHeight||'1.7';
+  el.style.fontFamily=family;
+  el.style.fontSize=size+'px';
+  el.style.lineHeight=height;
+  if(ff) store.fontFamily=ff.value;
+  if(fs) store.fontSize=fs.value;
+  if(lh) store.lineHeight=lh.value;
+  // 툴바 표시 동기화
+  const tip=$('readTypeBar');
+  if(tip) tip.setAttribute('data-font', size+'px');
+}
 (function initReadingStyle(){
   const setSel=(id,v,def)=>{const el=$(id);el.value=v;if(el.value!==String(v))el.value=def;};
   setSel('fontFamily',store.fontFamily||"'Noto Serif KR',serif","'Noto Serif KR',serif");
@@ -423,7 +441,27 @@ function selectBook(index){
   loadChapter(false);
 }
 
-function selectChapter(ch){selectedChapter=+ch;rememberLastRead(selectedBook,selectedChapter);loadChapter(false)}
+function selectChapter(ch){
+  let c=+ch;
+  if(!Number.isFinite(c)||c<1) c=1;
+  const max=books[selectedBook]?books[selectedBook][2]:1;
+  if(c>max) c=max;
+  try{
+    const scope=chaptersInReadScope(selectedBook);
+    if(scope&&scope.length && scope.indexOf(c)<0){
+      let best=scope[0], dist=Math.abs(best-c);
+      for(const x of scope){ const d=Math.abs(x-c); if(d<dist){ best=x; dist=d; } }
+      c=best;
+    }
+  }catch(e){}
+  try{ saveReadScrollPos(); }catch(e){}
+  selectedChapter=c;
+  if($('verseChapter')) $('verseChapter').value=String(c);
+  rememberLastRead(selectedBook,selectedChapter);
+  const p=loadChapter(false);
+  if(p&&p.then) p.then(function(){ try{ restoreReadScrollPos(); }catch(e){} }).catch(function(){});
+  try{ updateChapterGridFoldMeta(); }catch(e){}
+}
 function moveChapter(delta){
   const seq=getActiveReadSeq();
   if(seq&&seq.length){
@@ -506,18 +544,23 @@ function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(se
 function saveTotals(){try{store.verseTotal_v1=JSON.stringify(verseTotal)}catch(e){}}
 function chStatus(b,c){let k=verseKey(b,c),done=activeReadPlanId?planChapterDone(activeReadPlanId,k):chapterRead[k],marks=activeReadPlanId?planVerseMarks(activeReadPlanId,k):(verseRead[k]||[]);return done?'done':(marks.length?'part':'todo')}
 function renderChapterGrid(){
-  const n=books[selectedBook][2];
   const el=$('chapterGrid'); if(!el) return;
-  el.innerHTML=Array.from({length:n},(_,i)=>{
-    const c=i+1;
+  let list=[];
+  try{ list=chaptersInReadScope(selectedBook)||[]; }catch(e){ list=[]; }
+  if(!list.length){
+    const n=books[selectedBook]?books[selectedBook][2]:0;
+    list=Array.from({length:n},(_,i)=>i+1);
+  }
+  el.innerHTML=list.map(c=>{
     const st=chStatus(selectedBook,c);
     const state=st==='done'?'완료':(st==='part'?'일부 읽음':'미완료');
-    const sel=c===selectedChapter?' selected':'';
+    const sel=(+c===+selectedChapter)?' selected':'';
     return '<button type="button" class="ch-btn '+st+sel+'" data-ch="'+c+'"'+
-      ' onclick="openChapterDetail('+c+')"'+
-      ' aria-label="'+c+unit(selectedBook)+' · '+state+(c===selectedChapter?' · 선택됨':'')+'"'+
-      ' title="'+c+unit(selectedBook)+' · '+state+'">'+c+'</button>';
+      ' onclick="event.preventDefault();event.stopPropagation();openChapterDetail('+c+')"'+
+      ' aria-label="'+c+unit(selectedBook)+' · '+state+(+c===+selectedChapter?' · 선택됨':'')+'"'+
+      ' title="'+c+unit(selectedBook)+' · '+state+' · 클릭하여 본문 보기">'+c+'</button>';
   }).join('');
+  try{ updateChapterGridFoldMeta(); }catch(e){}
 }
 function jumpToFirstUnread(){
   const n=books[selectedBook][2];
@@ -532,18 +575,84 @@ function jumpToFirstUnread(){
   openChapterDetail(target);
   if(typeof toast==='function') toast(chLabel(selectedBook,target)+'로 이동합니다.');
 }
-function openChapterDetail(c){
-  selectChapter(+c);
-  // 본문 영역으로 스크롤해 자세히 보기
-  const host=$('bibleText')||$('read');
-  if(host&&host.scrollIntoView){
-    try{ host.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ host.scrollIntoView(true); }
+
+/* read-scroll-pos */
+function readScrollKey(){
+  return 'readScroll:'+selectedBook+':'+selectedChapter+(activeReadPlanId?':'+activeReadPlanId:'');
+}
+function saveReadScrollPos(){
+  try{
+    const host=$('bibleText');
+    if(!host) return;
+    const y=window.scrollY||document.documentElement.scrollTop||0;
+    const map=JSON.parse(store.readScrollMap_v1||'{}');
+    map[readScrollKey()]=y;
+    // keep map small
+    const keys=Object.keys(map);
+    if(keys.length>40){
+      keys.slice(0, keys.length-40).forEach(k=>delete map[k]);
+    }
+    store.readScrollMap_v1=JSON.stringify(map);
+  }catch(e){}
+}
+function restoreReadScrollPos(){
+  try{
+    const map=JSON.parse(store.readScrollMap_v1||'{}');
+    const y=map[readScrollKey()];
+    if(typeof y==='number'&&y>=0){
+      requestAnimationFrame(()=>{ window.scrollTo(0, y); });
+    }
+  }catch(e){}
+}
+
+function openChapterDetail(c, opts){
+  opts=opts||{};
+  c=+c;
+  if(!Number.isFinite(c)||c<1) return;
+  const max=books[selectedBook]?books[selectedBook][2]:0;
+  if(c>max) return;
+  try{ saveReadScrollPos(); }catch(e){}
+  selectedChapter=c;
+  if($('verseChapter')){
+    const sel=$('verseChapter');
+    const has=[...sel.options].some(o=>+o.value===c);
+    if(has) sel.value=String(c);
   }
+  rememberLastRead(selectedBook, selectedChapter);
+  loadChapter(false).then(function(){
+    const host=$('chapterHeading')||$('bibleText');
+    if(opts.restoreScroll){
+      restoreReadScrollPos();
+    } else if(host&&host.scrollIntoView){
+      try{ host.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ try{host.scrollIntoView(true);}catch(_){}}
+    }
+  }).catch(function(){});
   if($('chapterStatus')){
-    const st=chStatus(selectedBook,+c);
+    const st=chStatus(selectedBook,c);
     const state=st==='done'?'완료':(st==='part'?'일부 읽음':'미완료');
-    $('chapterStatus').textContent=chLabel(selectedBook,+c)+' · '+state+' · 본문을 표시합니다.';
+    $('chapterStatus').textContent=chLabel(selectedBook,c)+' · '+state+' · 본문을 표시합니다.';
   }
+  const meta=$('readSelectSummaryMeta');
+  if(meta) meta.textContent=chLabel(selectedBook,c);
+  // 장 선택 후 목록은 접어 본문에 집중
+  const fold=$('chapterGridFold');
+  if(fold) fold.open=false;
+  updateChapterGridFoldMeta();
+}
+function updateChapterGridFoldMeta(){
+  const meta=$('chapterGridFoldMeta');
+  if(!meta) return;
+  try{
+    let list=[];
+    try{ list=chaptersInReadScope(selectedBook)||[]; }catch(e){ list=[]; }
+    if(!list.length){
+      const n=books[selectedBook]?books[selectedBook][2]:0;
+      list=Array.from({length:n},(_,i)=>i+1);
+    }
+    let done=0;
+    for(const c of list){ if(chStatus(selectedBook,c)==='done') done++; }
+    meta.textContent=done+'/'+list.length+' 완료 · 현재 '+selectedChapter+unit(selectedBook);
+  }catch(e){ meta.textContent='펼쳐서 선택'; }
 }
 function fmtVerse(t){let h=safe(t),hide=store.hideNotes==='1';return h.replace(/(\d{1,3})\)/g,(m,d,off,str)=>{let p=str[off-1];if(!p||/[\s(\d]/.test(p))return m;return hide?'':'<sup class="fn">'+d+')</sup>'})}
 function toggleNotes(){store.hideNotes=$('hideNotes').checked?'1':'0';renderChapter()}
@@ -614,9 +723,15 @@ let focusMode=false;
 function toggleFocusMode(force){
   focusMode=typeof force==='boolean'?force:!focusMode;
   document.body.classList.toggle('focus-read', focusMode);
+  const read=$('read');
+  if(read) read.classList.toggle('is-focus', focusMode);
   const btn=$('focusModeBtn'), btn2=$('focusModeBtnDock');
   if(btn) btn.textContent=focusMode?'선택 보이기':'본문 집중';
   if(btn2) btn2.textContent=focusMode?'전체':'집중';
+  if(focusMode){
+    const host=$('bibleText');
+    if(host&&host.scrollIntoView){ try{ host.scrollIntoView({block:'start'}); }catch(e){} }
+  }
 }
 function nudgeFont(dir){
   const sel=$('fontSize'); if(!sel) return;
@@ -638,27 +753,52 @@ function cycleLineHeight(){
   if(typeof toast==='function') toast('줄 간격: '+sel.selectedOptions[0].textContent);
 }
 function afterChapterMarked(done){
-  if(!done) return;
+  const bar=$('chapterCompleteBar');
+  if(!bar) return;
+  if(!done){
+    bar.classList.add('hidden');
+    bar.hidden=true;
+    bar.innerHTML='';
+    return;
+  }
   const seq=getActiveReadSeq&&getActiveReadSeq();
-  let nextLabel='';
+  let nextLabel='', nextBook=null, nextCh=null;
   if(seq&&seq.length){
     const idx=seq.findIndex(it=>+it.book===+selectedBook&&+it.chapter===+selectedChapter);
     if(idx>=0&&idx<seq.length-1){
       const n=seq[idx+1];
       nextLabel=chLabel(n.book,n.chapter);
+      nextBook=+n.book; nextCh=+n.chapter;
+    }
+  } else {
+    const max=books[selectedBook]?books[selectedBook][2]:0;
+    if(selectedChapter<max){
+      nextCh=selectedChapter+1;
+      nextBook=selectedBook;
+      nextLabel=chLabel(selectedBook, nextCh);
     }
   }
-  const msg='이 '+unit(selectedBook)+'을 완료했습니다.'+(nextLabel?' 다음: '+nextLabel:'');
-  if(typeof toast==='function') toast(msg);
-  // soft prompt once
+  const msg='이 '+unit(selectedBook)+'을 완료했습니다.';
+  if(typeof toast==='function') toast(msg+(nextLabel?' 다음: '+nextLabel:''));
+  bar.hidden=false;
+  bar.classList.remove('hidden');
+  bar.innerHTML=
+    '<div class="ccb-msg"><b>장 완료</b> · '+safe(chLabel(selectedBook,selectedChapter))+'</div>'+
+    '<div class="ccb-actions">'+
+      (nextLabel
+        ? '<button type="button" class="ccb-primary" data-b="'+nextBook+'" data-c="'+nextCh+'" onclick="selectedBook=+this.dataset.b;refreshReadBookSelect(true);openChapterDetail(+this.dataset.c)">다음 장 · '+safe(nextLabel)+'</button>'
+        : '')+
+      '<button type="button" class="alt" onclick="view(\'notes\')">오늘의 한 줄</button>'+
+      '<button type="button" class="alt" onclick="exitReading(\'home\')">오늘의 통독</button>'+
+      '<button type="button" class="alt" onclick="hideChapterCompleteBar()">닫기</button>'+
+    '</div>';
+}
+function hideChapterCompleteBar(){
   const bar=$('chapterCompleteBar');
-  if(bar){
-    bar.classList.remove('hidden');
-    bar.innerHTML='<span class="small">'+safe(msg)+'</span> '+
-      (nextLabel?'<button type="button" onclick="moveChapter(1)">다음 장</button>':'')+
-      ' <button type="button" class="alt" onclick="view(\'notes\')">오늘의 한 줄</button>'+
-      ' <button type="button" class="alt" onclick="this.parentElement.classList.add(\'hidden\')">닫기</button>';
-  }
+  if(!bar) return;
+  bar.classList.add('hidden');
+  bar.hidden=true;
+  bar.innerHTML='';
 }
 
 function markChapter(){
@@ -2895,3 +3035,14 @@ document.addEventListener('keydown',function(e){
     if(!e.metaKey&&!e.ctrlKey){ e.preventDefault(); markChapter(); }
   }
 });
+
+/* read-scroll-listener */
+(function(){
+  let t=null;
+  window.addEventListener('scroll', function(){
+    const read=$('read');
+    if(!read||read.classList.contains('hidden')) return;
+    if(t) clearTimeout(t);
+    t=setTimeout(function(){ try{ saveReadScrollPos(); }catch(e){} }, 200);
+  }, {passive:true});
+})();

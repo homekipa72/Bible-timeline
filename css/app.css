@@ -740,3 +740,89 @@ body.focus-read #bibleText{
   .bible-verse .words{grid-area:words}
   .bible-verse .verse-note-action{grid-area:note; justify-self:start; margin-top:4px}
 }
+
+.read-select-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:4px;
+  cursor:default;
+  pointer-events:none;
+}
+.read-select-heading h3{pointer-events:none}
+.chaptergrid .ch-btn{cursor:pointer;pointer-events:auto}
+
+/* Read UI v31 */
+.ch-grid-fold{
+  margin-top:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:8px 12px 12px;
+  background:var(--soft);
+}
+.ch-grid-summary{
+  cursor:pointer;
+  list-style:none;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  font-weight:600;
+  color:var(--navy);
+  padding:6px 0;
+  user-select:none;
+}
+.ch-grid-summary::-webkit-details-marker{display:none}
+.ch-grid-fold[open] .ch-grid-summary{margin-bottom:8px}
+
+.chapter-complete-bar{
+  margin:12px 0;
+  padding:12px 14px;
+  border-radius:12px;
+  background:var(--read-done-bg, #e6f2ea);
+  border:1px solid var(--read-done-line, #9ec9ad);
+}
+.chapter-complete-bar.hidden,
+.chapter-complete-bar[hidden]{display:none !important}
+.ccb-msg{margin:0 0 10px;color:var(--read-done, #2f6b45)}
+.ccb-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ccb-primary{
+  background:var(--navy);
+  color:#fff;
+  border:1px solid var(--navy);
+  min-height:44px;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:600;
+}
+
+/* Focus: full width text only */
+body.focus-read .app{display:block}
+body.focus-read aside,
+body.focus-read .bottom-nav,
+body.focus-read #readPlanBar,
+body.focus-read #readSelectCard,
+body.focus-read .read-header-actions,
+body.focus-read .read-typebar,
+body.focus-read #readDock{display:none !important}
+body.focus-read #read{
+  max-width:42rem;
+  margin:0 auto;
+  padding:12px 16px 40px;
+}
+body.focus-read #read .read-header .h1{font-size:1.25rem}
+body.focus-read #bibleText{
+  font-size:1.08em;
+  max-width:none;
+}
+body.focus-read main{
+  padding-bottom:24px !important;
+}
+
+/* Header / card spacing tokens */
+#read .read-header{margin-bottom:14px}
+#read .card{margin-bottom:14px}
+#read .card:last-child{margin-bottom:0}
+#read .bible-verse{padding:12px 10px}

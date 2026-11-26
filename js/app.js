@@ -705,11 +705,11 @@ function renderHomePlans(){
           '<div class="small muted">'+pr.done+'/'+pr.total+'</div>'+
         '</div>'+
       '</div>'+
-      '<div class="progress" style="margin-top:12px"><span style="width:'+pr.pct+'%"></span></div>'+
+      '<div class="progress" style="margin-top:12px" role="progressbar" aria-valuenow="'+pr.pct+'" aria-valuemin="0" aria-valuemax="100" aria-label="'+safe(p.name)+' 진행률 '+pr.pct+'%"><span style="width:'+pr.pct+'%"></span></div>'+
       '<div class="small muted" style="margin-top:8px">구약 '+otnt.otD+'/'+otnt.otT+' ('+otnt.otP+'%) · 신약 '+otnt.ntD+'/'+otnt.ntT+' ('+otnt.ntP+'%)</div>'+
       catchUpHtml(p,pr)+
       '<div class="row home-plan-actions">'+
-        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'today\')">성경 읽기</button>'+
+        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'today\')" aria-label="'+safe(p.name)+' 성경 읽기">성경 읽기</button>'+
         '<button type="button" class="alt" onclick="completePlanToday(\''+p.id+'\')">오늘 분량 완료</button>'+
         '<button type="button" class="alt" onclick="openCard({type:\'progress\',planId:\''+p.id+'\'})">진도 카드</button>'+
         '<button type="button" class="alt home-plan-delete" onclick="deleteSavedPlan('+idx+')" aria-label="'+safe(p.name)+' 계획 삭제">삭제</button>'+
@@ -728,7 +728,7 @@ function renderHomeTodayCta(){
           '<div class="home-cta-label">오늘 시작할 통독</div>'+
           '<p class="small muted" style="margin:6px 0 0">아직 저장된 계획이 없습니다. 범위와 기간을 정해 통독을 시작해 보세요.</p>'+
         '</div>'+
-        '<button type="button" class="home-cta-btn" onclick="view(\'plan\')">통독 계획 만들기</button>'+
+        '<button type="button" class="home-cta-btn" onclick="view(\'plan\')" aria-label="통독 계획 만들기">통독 계획 만들기</button>'+
       '</div>';
     return;
   }
@@ -751,7 +751,7 @@ function renderHomeTodayCta(){
           (allDone?' <span class="muted">· 오늘 분량을 모두 읽었습니다</span>':' <span class="muted">· 오늘 배정 없음</span>')+
           '</p>'+
         '</div>'+
-        '<button type="button" class="home-cta-btn" onclick="openPlanReading(\''+safe(pick.id)+'\',\'today\')">성경 읽기</button>'+
+        '<button type="button" class="home-cta-btn" onclick="openPlanReading(\''+safe(pick.id)+'\',\'today\')" aria-label="성경 읽기">성경 읽기</button>'+
       '</div>';
     return;
   }
@@ -765,7 +765,7 @@ function renderHomeTodayCta(){
         (items.length>1?' · 외 '+(items.length-1)+'개':'')+
         '</span></p>'+
       '</div>'+
-      '<button type="button" class="home-cta-btn" data-plan-id="'+safe(pick.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">지금 읽기</button>'+
+      '<button type="button" class="home-cta-btn" data-plan-id="'+safe(pick.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')" aria-label="지금 읽기">지금 읽기</button>'+
     '</div>';
 }
 
@@ -775,6 +775,10 @@ function dashboard(){
   if(t) t.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
   try{ renderHomeTodayCta(); }catch(e){}
   renderHomePlans();
+  // 와이어: 계획 0개면 ②·목록 안내는 숨기고 Primary CTA만
+  const has=!!(savedPlans&&savedPlans.length);
+  const sc=$('homePlanShortcut'); if(sc) sc.classList.toggle('hidden', !has);
+  const hi=$('homeHint'); if(hi) hi.classList.toggle('hidden', !has);
   try{ renderOneLine(); }catch(e){}
 }
 function openPlanReading(planId, mode){
@@ -839,7 +843,7 @@ function renderReadPlanPreview(){
   if(!box) return;
   const p=getActivePlan();
   if(!p){
-    if(meta) meta.textContent='통독 계획이 없습니다. 오늘의 통독에서 계획을 선택하거나 통독 계획 탭에서 저장해 주세요.';
+    if(meta) meta.textContent='통독 계획이 없습니다. 오늘의 통독에서 「통독 계획 만들기」로 저장해 주세요.';
     box.innerHTML='';
     return;
   }

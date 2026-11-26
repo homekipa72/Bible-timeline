@@ -361,3 +361,23 @@ body:not(.read-mode) .read-typebar{display:none}
   }
   .home-plan-empty{ grid-column: 1 / -1; }
 }
+
+/* Home wireframe detail polish */
+#home .home-cta-primary{
+  padding: 16px 18px;
+}
+#home .home-cta-btn:focus-visible,
+#home .home-plan-actions button:focus-visible{
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+#home .home-plan-card{
+  padding: 16px 18px;
+}
+#home .home-plan-actions button{
+  min-height: 40px;
+}
+#home #homeHint.hidden,
+#home #homePlanShortcut.hidden{
+  display: none !important;
+}

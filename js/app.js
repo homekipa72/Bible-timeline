@@ -80,6 +80,24 @@ function adjustFlexiblePlan(p){
   return true;
 }
 
+
+function planOtNtProgress(p){
+  const seq=buildSeqForPlan(p);
+  let otT=0,otD=0,ntT=0,ntD=0;
+  for(const it of seq){
+    const bi=+it.book;
+    const key=verseKey(it.book,it.chapter);
+    const done=planChapterDone(p.id,key);
+    if(bi<46){ otT++; if(done) otD++; }
+    else { ntT++; if(done) ntD++; }
+  }
+  return {
+    otT,otD,ntT,ntD,
+    otP: otT?Math.round(otD/otT*100):0,
+    ntP: ntT?Math.round(ntD/ntT*100):0
+  };
+}
+
 function planProgress(p){
   const seq=buildSeqForPlan(p);
   let done=0;
@@ -326,6 +344,7 @@ function view(id,planId){
   if(id==='notes'){renderNotes();try{renderOneLine();}catch(e){}}
   if(id==='stats')stats();
   if(id==='badges'){checkBadgeAwards();renderBadges();}
+  if(id==='settings'){ try{ applyTextStyle(); }catch(e){} }
   if(id==='read'){refreshReadBookSelect(true);refreshReadChapterSelect(selectedChapter);loadChapter(false);renderReadPlanPreview();updateMarkButtons();}
   window.scrollTo(0,0);
 }
@@ -433,7 +452,7 @@ function moveChapter(delta){
   rememberLastRead(b,c);loadChapter(false);
 }
 function verseKey(b,c){return b+':'+c}
-function saveVerseData(){store.verseRead_v1=JSON.stringify(verseRead);store.chapterRead_v1=JSON.stringify(chapterRead);if(periodChart||testamentChart||bookChart)updateCharts();if($('todayList'))renderTodayList()}
+function saveVerseData(){store.verseRead_v1=JSON.stringify(verseRead);store.chapterRead_v1=JSON.stringify(chapterRead);if(periodChart||otChart||ntChart||bookChart)updateCharts();if($('todayList'))renderTodayList()}
 function htmlToText(root){let out='';const blocks=new Set(['ADDRESS','ARTICLE','ASIDE','BLOCKQUOTE','BR','DD','DIV','DL','DT','H1','H2','H3','H4','LI','OL','P','SECTION','SPAN','TABLE','TR','UL']);function walk(node){if(node.nodeType===3){out+=node.nodeValue;return}if(node.nodeType!==1)return;const tag=node.tagName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT')return;if(blocks.has(tag))out+='\n';for(const child of node.childNodes)walk(child);if(blocks.has(tag))out+='\n'}walk(root);return out.replace(/\n{3,}/g,'\n\n')}
 function extractVerses(html,bi=selectedBook,ch=selectedChapter){
   const doc=new DOMParser().parseFromString(html,'text/html');
@@ -634,7 +653,7 @@ function renderTodayList(){
   const el=$('todayList');
   if(!el) return;
   if(!savedPlans.length){
-    el.innerHTML='<p class="muted small">저장된 통독 계획이 없습니다. 통독 계획 탭에서 이름·범위·시작일·기간을 설정한 뒤 저장해 주세요.</p>';
+    el.innerHTML='<p class="muted small">저장된 통독 계획이 없습니다. 아래에서 「계획 작성·편집」으로 이름·범위·시작일·기간을 설정한 뒤 저장해 주세요.</p>';
     return;
   }
   let html='';
@@ -660,41 +679,59 @@ function renderHomePlans(){
   const el=$('homePlanList');
   if(!el) return;
   if(!savedPlans.length){
-    el.innerHTML='<div class="card"><p class="muted">진행 중인 통독 계획이 없습니다.</p><p class="small muted">통독 계획 탭에서 이름·범위·시작일·기간을 설정한 뒤 저장해 주세요. (최대 5개)</p><button type="button" onclick="view(\'plan\')">통독 계획 만들기</button></div>';
+    el.innerHTML=
+      '<div class="card home-plan-empty">'+
+        '<p class="muted" style="margin:0 0 6px">진행 중인 통독 계획이 없습니다.</p>'+
+        '<p class="small muted" style="margin:0 0 12px">통독 계획 만들기로 범위·기간을 정해 보세요. (최대 5개)</p>'+
+        '<button type="button" onclick="view(\'plan\')">통독 계획 만들기</button>'+
+      '</div>';
     return;
   }
   el.innerHTML=savedPlans.map((p,idx)=>{
     const pr=planProgress(p);
+    const otnt=planOtNtProgress(p);
     const periodText=(p.start||'')+(pr.endStr?' ~ '+pr.endStr:'')+' · '+p.days+'일';
-    const active= (getActivePlan()&&getActivePlan().id===p.id);
-    return '<div class="card" style="border-color:'+(active?'var(--gold)':'var(--line)')+'">'+
-      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">'+
-        '<div><div class="eyebrow">READING PLAN</div><h2 style="margin:4px 0 8px;font:22px Georgia;color:var(--navy)">'+safe(p.name)+'</h2>'+
-        '<div class="small muted">기한 '+safe(periodText)+'</div>'+
-        '<div class="small" style="margin-top:4px">상태 · <b>'+safe(pr.status)+'</b></div></div>'+
-        '<div style="text-align:right"><div class="metric" style="font-size:26px">'+pr.pct+'%</div><div class="small muted">'+pr.done+'/'+pr.total+'</div></div>'+
+    const active=getActivePlan()&&getActivePlan().id===p.id;
+    return '<article class="card home-plan-card'+(active?' is-active':'')+'">'+
+      '<div class="home-plan-head">'+
+        '<div>'+
+          '<div class="eyebrow">READING PLAN</div>'+
+          '<h2 class="home-plan-title">'+safe(p.name)+'</h2>'+
+          '<div class="small muted">기한 '+safe(periodText)+'</div>'+
+          '<div class="small" style="margin-top:4px">상태 · <b>'+safe(pr.status)+'</b></div>'+
+        '</div>'+
+        '<div class="home-plan-pct">'+
+          '<div class="metric">'+pr.pct+'%</div>'+
+          '<div class="small muted">'+pr.done+'/'+pr.total+'</div>'+
+        '</div>'+
       '</div>'+
       '<div class="progress" style="margin-top:12px"><span style="width:'+pr.pct+'%"></span></div>'+
+      '<div class="small muted" style="margin-top:8px">구약 '+otnt.otD+'/'+otnt.otT+' ('+otnt.otP+'%) · 신약 '+otnt.ntD+'/'+otnt.ntT+' ('+otnt.ntP+'%)</div>'+
       catchUpHtml(p,pr)+
-      '<div class="row" style="margin-top:14px;flex-wrap:wrap;gap:8px">'+
-        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'last\')">성경 읽기</button>'+
-        '<button type="button" class="alt" onclick="openPlanReading(\''+p.id+'\',\'today\')">오늘 분량 읽기</button>'+
+      '<div class="row home-plan-actions">'+
+        '<button type="button" onclick="openPlanReading(\''+p.id+'\',\'today\')">성경 읽기</button>'+
         '<button type="button" class="alt" onclick="completePlanToday(\''+p.id+'\')">오늘 분량 완료</button>'+
         '<button type="button" class="alt" onclick="openCard({type:\'progress\',planId:\''+p.id+'\'})">진도 카드</button>'+
-        '<button type="button" class="alt" style="color:#9f3434;border:1px solid #e4b9b9" onclick="deleteSavedPlan('+idx+')" aria-label="'+safe(p.name)+' 계획 삭제">삭제</button>'+
-      '</div></div>';
+        '<button type="button" class="alt home-plan-delete" onclick="deleteSavedPlan('+idx+')" aria-label="'+safe(p.name)+' 계획 삭제">삭제</button>'+
+      '</div>'+
+    '</article>';
   }).join('');
 }
+
 
 function renderHomeTodayCta(){
   const el=$('homeTodayCta'); if(!el) return;
   if(!savedPlans.length){
-    el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
-      '<div><b style="color:var(--navy)">오늘 시작할 통독</b><p class="small muted" style="margin:4px 0 0">아직 저장된 계획이 없습니다.</p></div>'+
-      '<button type="button" onclick="view(\'plan\')">계획 만들기</button></div>';
+    el.innerHTML=
+      '<div class="row home-cta-row">'+
+        '<div class="home-cta-copy">'+
+          '<div class="home-cta-label">오늘 시작할 통독</div>'+
+          '<p class="small muted" style="margin:6px 0 0">아직 저장된 계획이 없습니다. 범위와 기간을 정해 통독을 시작해 보세요.</p>'+
+        '</div>'+
+        '<button type="button" class="home-cta-btn" onclick="view(\'plan\')">통독 계획 만들기</button>'+
+      '</div>';
     return;
   }
-  // pick plan with incomplete today items, else active, else first
   let pick=null, items=[];
   const active=getActivePlan&&getActivePlan();
   const order=active?[active,...savedPlans.filter(p=>p.id!==active.id)]:savedPlans.slice();
@@ -706,18 +743,32 @@ function renderHomeTodayCta(){
     pick=active||savedPlans[0];
     items=todayItemsForPlan(pick);
     const allDone=items.length && items.every(x=>x.done);
-    el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
-      '<div><b style="color:var(--navy)">오늘의 통독</b><p class="small muted" style="margin:4px 0 0">'+safe(pick.name)+(allDone?' · 오늘 분량 완료':' · 오늘 배정 없음')+'</p></div>'+
-      '<button type="button" onclick="openPlanReading(\''+safe(pick.id)+'\',\'last\')">이어서 읽기</button></div>';
+    el.innerHTML=
+      '<div class="row home-cta-row">'+
+        '<div class="home-cta-copy">'+
+          '<div class="home-cta-label">오늘의 통독</div>'+
+          '<p class="small" style="margin:6px 0 0"><b>'+safe(pick.name)+'</b>'+
+          (allDone?' <span class="muted">· 오늘 분량을 모두 읽었습니다</span>':' <span class="muted">· 오늘 배정 없음</span>')+
+          '</p>'+
+        '</div>'+
+        '<button type="button" class="home-cta-btn" onclick="openPlanReading(\''+safe(pick.id)+'\',\'today\')">성경 읽기</button>'+
+      '</div>';
     return;
   }
   const first=items[0];
-  el.innerHTML='<div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'+
-    '<div><b style="color:var(--navy)">오늘 할 일</b>'+
-    '<p class="small" style="margin:4px 0 0"><b>'+safe(first.label)+'</b> · '+safe(pick.name)+
-    (items.length>1?' <span class="muted">외 '+(items.length-1)+'개</span>':'')+'</p></div>'+
-    '<button type="button" data-plan-id="'+safe(pick.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">지금 읽기</button></div>';
+  el.innerHTML=
+    '<div class="row home-cta-row">'+
+      '<div class="home-cta-copy">'+
+        '<div class="home-cta-label">오늘 할 일</div>'+
+        '<p class="small" style="margin:6px 0 0"><b>'+safe(first.label)+'</b>'+
+        ' <span class="muted">· '+safe(pick.name)+
+        (items.length>1?' · 외 '+(items.length-1)+'개':'')+
+        '</span></p>'+
+      '</div>'+
+      '<button type="button" class="home-cta-btn" data-plan-id="'+safe(pick.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">지금 읽기</button>'+
+    '</div>';
 }
+
 
 function dashboard(){
   const t=$('today');
@@ -919,7 +970,7 @@ function renderPlanCardPreview(){
       '<div class="progress" style="margin-top:12px"><span style="width:0%"></span></div>'+
       '<div class="row" style="margin-top:14px;flex-wrap:wrap;gap:8px">'+
         '<button type="button" disabled>성경 읽기</button>'+
-        '<button type="button" class="alt" disabled>오늘 분량 읽기</button>'+
+        
         '<button type="button" class="alt" disabled>오늘 분량 완료</button>'+
       '</div></div>';
 }
@@ -1569,7 +1620,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Chart.js instances (실시간 바인딩)
-let periodChart=null, testamentChart=null, bookChart=null;
+let periodChart=null, testamentChart=null, otChart=null, ntChart=null, bookChart=null;
 
 
 function updateCharts(){
@@ -1640,41 +1691,44 @@ function applyChartData(d){
     }
   }
 
-  // 구약/신약 도넛
-  const tCtx=$('testamentChart');
-  if(tCtx){
-    const tData=[d.otD, Math.max(0,d.otT-d.otD), d.ntD, Math.max(0,d.ntT-d.ntD)];
-    if(testamentChart){
-      testamentChart.data.datasets[0].data=tData;
-      testamentChart.update('none');
-    } else {
-      testamentChart=new Chart(tCtx,{
-        type:'doughnut',
-        data:{
-          labels:['구약 완료','구약 남음','신약 완료','신약 남음'],
-          datasets:[{
-            data:tData,
-            backgroundColor:['#172b43','#d4d0c8','#b99a61','#e9e4d9'],
-            borderWidth:0
-          }]
-        },
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          cutout:'62%',
-          plugins:{
-            legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}},
-            tooltip:{callbacks:{
-              label:(ctx)=>{
-                const v=ctx.raw||0;
-                const sum=ctx.dataset.data.reduce((a,b)=>a+b,0)||1;
-                return ' '+ctx.label+': '+v+' ('+Math.round(100*v/sum)+'%)';
-              }
-            }}
-          }
-        }
-      });
+  // 구약 / 신약 각각 도넛
+  const otDone=d.otD||0, otTot=d.otT||1, ntDone=d.ntD||0, ntTot=d.ntT||1;
+  const mkDonut=(canvasId, done, tot, label, color, storeKey)=>{
+    const ctx=$(canvasId); if(!ctx) return null;
+    const remain=Math.max(0,tot-done);
+    const existing = storeKey==='ot'?otChart:ntChart;
+    if(existing){
+      existing.data.datasets[0].data=[done, remain];
+      existing.update('none');
+      return existing;
     }
+    return new Chart(ctx,{
+      type:'doughnut',
+      data:{
+        labels:[label+' 완료', label+' 남음'],
+        datasets:[{ data:[done, remain], backgroundColor:[color, '#e9e4d9'], borderWidth:0 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{
+          legend:{position:'bottom', labels:{boxWidth:12, font:{size:11}}},
+          tooltip:{callbacks:{label:(c)=>{
+            const v=c.raw||0; const p=tot?Math.round(100*v/tot):0;
+            return ' '+c.label+': '+v+'장 ('+p+'%)';
+          }}}
+        }
+      }
+    });
+  };
+  otChart = mkDonut('otChart', otDone, otTot, '구약', '#172b43', 'ot') || otChart;
+  ntChart = mkDonut('ntChart', ntDone, ntTot, '신약', '#C9A227', 'nt') || ntChart;
+  // also text bars
+  if($('testamentProgress')){
+    const otP=otTot?Math.round(100*otDone/otTot):0;
+    const ntP=ntTot?Math.round(100*ntDone/ntTot):0;
+    $('testamentProgress').innerHTML=
+      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>구약</span><span class="muted">'+otDone+' / '+otTot+' · '+otP+'%</span></div><div class="progress"><span style="width:'+otP+'%;background:var(--navy)"></span></div></div>'+
+      '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>신약</span><span class="muted">'+ntDone+' / '+ntTot+' · '+ntP+'%</span></div><div class="progress"><span style="width:'+ntP+'%;background:var(--gold)"></span></div></div>';
   }
 
   // 책별 상위 완료율
@@ -1740,7 +1794,7 @@ function renderPlanItemProgress(){
   }
   let html='';
   for(const p of savedPlans){
-    const pr=planProgress(p);
+    const pr=planProgress(p); const otnt=planOtNtProgress(p);
     const today=todayItemsForPlan(p);
     const todayDone=today.filter(x=>x.done).length;
     const stClass=pr.status.indexOf('완료')>=0?'done':(pr.backlog&&pr.backlog.length?'warn':'');
@@ -1768,14 +1822,13 @@ function renderPlanItemProgress(){
         (pr.skipped?'<span>건너뜀 <b>'+pr.skipped+'</b></span>':'')+
       '</div>'+
       '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">'+
-        '<button type="button" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">오늘 읽기</button>'+
-        '<button type="button" class="alt" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'last\')">이어서 읽기</button>'+
+        '<button type="button" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">성경 읽기</button>'+
       '</div>'+
       '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">책별 진도 · 오늘 목록</summary>'+
         '<div style="margin-top:8px">'+bookRows+
         (today.length?'<div class="small" style="margin-top:10px"><b>오늘</b> · '+today.map(it=>safe(it.label)+(it.done?' ✓':'')).join(' · ')+'</div>':'')+
         '</div></details>'+
-    '</article>';
+    '<div style="margin-top:10px">'+'<div class="small" style="display:flex;justify-content:space-between"><span>구약</span><span class="muted">'+otnt.otD+'/'+otnt.otT+' · '+otnt.otP+'%</span></div>'+'<div class="progress" style="margin:4px 0 8px"><span style="width:'+otnt.otP+'%;background:var(--navy)"></span></div>'+'<div class="small" style="display:flex;justify-content:space-between"><span>신약</span><span class="muted">'+otnt.ntD+'/'+otnt.ntT+' · '+otnt.ntP+'%</span></div>'+'<div class="progress" style="margin:4px 0"><span style="width:'+otnt.ntP+'%;background:var(--gold)"></span></div>'+'</div></article>';
   }
   box.innerHTML=html;
 }
@@ -1800,7 +1853,7 @@ function stats(){
   if($('sCumUnique')) $('sCumUnique').textContent=uniqueKeys.size;
   if($('overallRing')) $('overallRing').style.setProperty('--pct', String(pct));
   if($('overallRingCaption')) $('overallRingCaption').textContent=doneKeys.length+' / '+totalChapters()+'장';
-  if($('history')) $('history').textContent='장·절 통독 기록으로 관리합니다.';
+  
   const chKeys=doneKeys;
   const bset=[...new Set([...keys,...doneKeys].map(k=>+k.split(':')[0]))].filter(b=>b>=0&&b<books.length).sort((a,b)=>a-b);
   let rows=bset.map(b=>{
@@ -2663,3 +2716,5 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
 document.addEventListener('click',function(e){ const m=$('badgeModal'); if(m&&!m.classList.contains('hidden')&&e.target===m) closeBadgeModal(); });
 
 document.addEventListener('DOMContentLoaded',function(){ try{ maybeShowOnboard(); }catch(e){} });
+
+try{ applyTheme(); }catch(e){}

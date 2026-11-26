@@ -28,31 +28,34 @@ const store=(function(){
 function isPlainObj(v){ return !!v&&typeof v==='object'&&!Array.isArray(v); }
 function systemPrefersDark(){ try{ return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches; }catch(e){ return false; } }
 function resolveTheme(pref){
-  if(pref==='dark'||pref==='light') return pref;
+  // 다크 선택 제거: system이어도 OS 다크면 라이트로 고정하지 않고,
+  // 시스템 테마 허용 시 OS 설정을 따르되, 사용자 선택지는 light/system만.
+  if(pref==='light') return 'light';
+  if(pref==='dark') return 'light'; // 과거 dark 저장값 무시
   return systemPrefersDark()?'dark':'light';
 }
 function applyTheme(pref){
-  const mode=pref==null?(store.themePref||'system'):pref;
+  let mode=pref==null?(store.themePref||'system'):pref;
+  if(mode==='dark') mode='system'; // 다크 옵션 삭제
   if(pref!=null) store.themePref=mode;
   const resolved=resolveTheme(mode==='system'?null:mode);
   if(mode==='system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', mode);
+  else document.documentElement.setAttribute('data-theme', 'light');
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content', resolved==='dark'?'#0f141b':'#172b43');
-  const btn=$('themeToggle');
-  if(btn){
-    const label=mode==='dark'?'라이트 모드':(mode==='light'?'시스템 테마':'다크 모드');
-    btn.textContent=label;
-    btn.setAttribute('aria-pressed', mode==='dark'?'true':'false');
-    btn.title='표시 테마: '+(mode==='system'?'시스템':mode==='dark'?'다크':'라이트');
-  }
+  const sel=$('themePrefSelect');
+  if(sel) sel.value=(mode==='light'?'light':'system');
 }
 function toggleTheme(){
   const cur=store.themePref||'system';
-  const next=cur==='system'?'dark':(cur==='dark'?'light':'system');
-  applyTheme(next);
-  try{ toast(next==='dark'?'다크 모드':(next==='light'?'라이트 모드':'시스템 테마')); }catch(e){}
+  applyTheme(cur==='light'?'system':'light');
+  try{ toast((store.themePref||'system')==='light'?'라이트 모드':'시스템 테마'); }catch(e){}
 }
+function setThemePref(mode){
+  if(mode!=='light'&&mode!=='system') mode='system';
+  applyTheme(mode);
+}
+
 // 저장된 JSON을 읽습니다. 없거나·손상되었거나·형태가 다르면 기본값을 돌려주고, 손상본은 복구용으로 따로 남깁니다.
 function jget(key,fallback,valid){
   let raw=null;

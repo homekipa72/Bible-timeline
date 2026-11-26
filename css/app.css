@@ -113,8 +113,8 @@ body.copy-mode main{padding-bottom:130px}
 .skip-link:focus{left:8px;outline:3px solid var(--focus);outline-offset:2px}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 button:focus:not(:focus-visible),a:focus:not(:focus-visible),select:focus:not(:focus-visible),input:focus:not(:focus-visible),textarea:focus:not(:focus-visible){outline:none}
-.theme-toggle{margin-top:auto;width:100%;text-align:left;background:#ffffff14;color:var(--brand);border:1px solid #ffffff22;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:13px}
-.theme-toggle:hover{background:#ffffff22}
+.theme-toggle-removed{margin-top:auto;width:100%;text-align:left;background:#ffffff14;color:var(--brand);border:1px solid #ffffff22;border-radius:8px;padding:10px 12px;cursor:pointer;font-size:13px}
+.theme-toggle-removed:hover{background:#ffffff22}
 
 /* Dark theme (manual or system) */
 html[data-theme="dark"]{color-scheme:dark}
@@ -282,3 +282,82 @@ body:not(.read-mode) .read-typebar{display:none}
 .badge-card.unlocked .badge-ico{box-shadow:none !important}
 #badgeModalIcon{display:grid;place-items:center}
 #badgeModalIcon .badge-svg svg{width:56px;height:56px}
+
+/* settings */
+#settings .card h3{margin-top:0}
+
+/* ===== Home wireframe ===== */
+.home-cta-primary{
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--gold) 20%, transparent);
+}
+.home-cta-row{
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.home-cta-label{
+  font-weight: 700;
+  color: var(--navy);
+  font-size: 15px;
+}
+.home-cta-btn{
+  min-height: 44px;
+  padding: 10px 18px;
+  font-weight: 600;
+}
+.home-plan-create button.alt{
+  min-height: 40px;
+}
+.home-plan-list{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.home-plan-card.is-active{
+  border-color: var(--gold);
+}
+.home-plan-head{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.home-plan-title{
+  margin: 4px 0 8px;
+  font: 22px Georgia, "Noto Serif KR", serif;
+  color: var(--navy);
+}
+.home-plan-pct{
+  text-align: right;
+  flex-shrink: 0;
+}
+.home-plan-pct .metric{
+  font-size: 26px;
+  line-height: 1.1;
+}
+.home-plan-actions{
+  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-plan-delete{
+  color: #9f3434;
+  border: 1px solid #e4b9b9;
+}
+.home-source{
+  margin-top: 18px;
+  padding-top: 4px;
+}
+.home-plan-empty{
+  text-align: left;
+}
+@media (min-width: 900px){
+  .home-plan-list{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .home-plan-empty{ grid-column: 1 / -1; }
+}

@@ -25,6 +25,7 @@
 <button type="button" class="active" data-v="home" aria-current="page">오늘의 통독</button>
 <button type="button" data-v="missa">오늘의 말씀</button>
 <button type="button" data-v="notes">묵상 노트</button>
+<button type="button" data-v="verseShelf">구절 보관함</button>
 <button type="button" data-v="badges">통독 인증</button>
 <button type="button" data-v="stats">통독 통계</button>
 <button type="button" data-v="settings">환경 설정</button>
@@ -154,9 +155,8 @@
   <button type="button" id="btnMarkChDock" onclick="markChapter()">완료</button>
   <button type="button" class="alt" onclick="moveChapter(1)">다음</button>
 </div>
-<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="chapter-complete-bar hidden" hidden></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><button type="button" class="alt" id="selectModeBtn" onclick="toggleSelectMode()">구절 선택</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="selectHint" class="notice hidden" style="margin:10px 0">구절을 여러 개 선택해 책갈피·밑줄·메모로 보관합니다. 선택 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="selectBar" class="copybar hidden"><span id="selectCount" class="cnt">0절 선택</span><button type="button" class="alt" onclick="saveSelectedShelf('bookmark')">책갈피</button><button type="button" class="alt" onclick="saveSelectedShelf('highlight')">밑줄</button><button type="button" onclick="saveSelectedShelf('note')">메모</button><button type="button" class="alt" onclick="clearSelectMode()">닫기</button></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="chapter-complete-bar hidden" hidden></div>
 <div id="bibleText" class="bible-text bible-verses"><p class="muted">성경의 책과 장을 선택하면 본문이 표시됩니다.</p></div><p class="small">절을 누르면 읽음 표시가 저장됩니다. 다시 누르면 표시가 해제됩니다. 본문은 장별로 이 기기의 브라우저에 보관됩니다.</p></div>
-<div class="reader"><div></div><div class="card"><b>읽기 메모</b><textarea id="quick" placeholder="읽으면서 떠오른 생각"></textarea><button style="margin-top:8px" onclick="quickNote()">메모 저장</button></div></div>
 <p class="small">성경 본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a>. 앱 내 본문 저장 및 이용은 승인된 사용 범위에 따라 운영합니다.</p></section>
 <section id="plan" class="hidden"><div class="eyebrow">READING PLAN</div><div class="h1">나만의 통독 계획</div>
 
@@ -248,6 +248,7 @@
 <div class="card" style="margin-top:16px">
 <h3>저장된 통독 계획 <span class="small muted" id="planCountLabel">(0/4)</span></h3>
 <div id="savedPlansList"></div>
+<h3 style="margin-top:18px">완료한 통독 기록</h3><div id="completedPlansList"></div>
 </div>
 
 <div class="card" id="reminderCard">
@@ -339,6 +340,7 @@
   <div id="noteList" style="margin-top:10px"></div>
 </div>
 </section>
+
 
 <section id="badges" class="hidden">
   <div class="eyebrow">SIGNS ALONG THE WAY</div>
@@ -513,6 +515,7 @@
 </div>
 </section>
 
+<section id="verseShelf" class="hidden"><div class="eyebrow">SAVED VERSES</div><div class="h1">구절 보관함</div><p class="muted">책갈피·밑줄·메모는 이 기기에만 저장됩니다.</p><div class="card"><div class="row"><input id="verseShelfSearch" type="search" placeholder="구절·메모 검색" oninput="renderVerseShelf()"><select id="verseShelfFilter" onchange="renderVerseShelf()"><option value="all">전체</option><option value="bookmark">책갈피</option><option value="highlight">밑줄</option><option value="note">메모</option></select></div><div id="verseShelfList" style="margin-top:12px"></div></div></section>
 </main>
 <div class="modal hidden" id="onboardModal" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
   <div class="modal-box" style="max-width:420px">

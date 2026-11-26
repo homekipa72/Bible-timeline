@@ -826,3 +826,4 @@ body.focus-read main{
 #read .card{margin-bottom:14px}
 #read .card:last-child{margin-bottom:0}
 #read .bible-verse{padding:12px 10px}
+body.verse-select-mode .read-dock{display:none!important}body.verse-select-mode main{padding-bottom:130px}#selectModeBtn.on{background:var(--gold);color:#fff}

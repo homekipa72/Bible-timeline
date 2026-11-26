@@ -1,5 +1,7 @@
 /* storage: /js/storage.js */
 /* 정적 데이터: /js/data.js */
+// Remove legacy reading memo widget keys once; shared notes are kept.
+['quick','quickReflect','quickNotes_v1','readingMemo_v1'].forEach(k=>store.removeItem(k));
 let planType=store.planType||'all';
 let customPeriodSet=jget('customPeriods',[1,2,3,4,5,6,7,8,9,10,11,12],Array.isArray);
 let customBookSet=jget('customBooks',null);
@@ -25,6 +27,12 @@ if(savedPlans.length>4){ savedPlans=savedPlans.slice(0,4); store.savedPlans=JSON
 let planSkipSundays=false; // 기간 설정: 주일 제외 배분
 let planCalendarDays=365; // 주일 제외 전 전체 달력 일수
 function persistPlans(){ store.savedPlans=JSON.stringify(savedPlans); }
+let completedPlans=jget('completedPlans_v1',[],Array.isArray);
+function persistCompletedPlans(){store.completedPlans_v1=JSON.stringify(completedPlans)}
+let verseShelf=jget('verseShelf_v1',[],Array.isArray);
+function persistVerseShelf(){store.verseShelf_v1=JSON.stringify(verseShelf)}
+function archiveIfComplete(id){const p=savedPlans.find(x=>x.id===id);if(!p)return;const pr=planProgress(p);if(pr.total&&pr.done===pr.total){if(!completedPlans.some(x=>x.id===id)){completedPlans.push({...p,completedAt:new Date().toISOString()});persistCompletedPlans()}savedPlans=savedPlans.filter(x=>x.id!==id);persistPlans();if(activePlanId===id)setActivePlan(savedPlans[0]?.id||'')}}
+
 let activePlanId=store.activePlanId||'';
 let editingPlanId='';
 let editingPlanSnapshot=null;
@@ -42,8 +50,8 @@ function backfillCumulative(){for(const [id,st] of Object.entries(planReadingSta
 function planState(id){if(!id)return null;if(!planReadingState[id])planReadingState[id]={chapters:{},verses:{}};const st=planReadingState[id];if(!st.chapters)st.chapters={};if(!st.verses)st.verses={};return st}
 function planChapterDone(id,key){const st=planReadingState[id];return !!(st&&st.chapters&&st.chapters[key])}
 function planVerseMarks(id,key){const st=planReadingState[id];return st&&st.verses&&Array.isArray(st.verses[key])?st.verses[key]:[]}
-function setPlanChapterDone(id,key,done,verseNumbers){if(!id)return;const st=planState(id);if(done)st.chapters[key]=true;else delete st.chapters[key];if(Array.isArray(verseNumbers)){if(verseNumbers.length)st.verses[key]=verseNumbers;else delete st.verses[key]}else if(!done)delete st.verses[key];savePlanReadingState();recordCumulative(id,key,st.verses[key]||[])}
-function togglePlanVerse(id,key,verseNo){const st=planState(id);let arr=Array.isArray(st.verses[key])?st.verses[key]:[];if(st.chapters[key]&&currentVerses.length)arr=currentVerses.map(v=>v.n);st.verses[key]=arr.includes(verseNo)?arr.filter(n=>n!==verseNo):[...arr,verseNo].sort((a,b)=>a-b);if(currentVerses.length&&st.verses[key].length===currentVerses.length)st.chapters[key]=true;else delete st.chapters[key];if(!st.verses[key].length)delete st.verses[key];savePlanReadingState();recordCumulative(id,key,st.verses[key]||[])}
+function setPlanChapterDone(id,key,done,verseNumbers){if(!id)return;const st=planState(id);if(done)st.chapters[key]=true;else delete st.chapters[key];if(Array.isArray(verseNumbers)){if(verseNumbers.length)st.verses[key]=verseNumbers;else delete st.verses[key]}else if(!done)delete st.verses[key];savePlanReadingState();recordCumulative(id,key,st.verses[key]||[]);if(done)setTimeout(()=>{archiveIfComplete(id);dashboard();renderSavedPlans()},0)}
+function togglePlanVerse(id,key,verseNo){const st=planState(id);let arr=Array.isArray(st.verses[key])?st.verses[key]:[];if(st.chapters[key]&&currentVerses.length)arr=currentVerses.map(v=>v.n);st.verses[key]=arr.includes(verseNo)?arr.filter(n=>n!==verseNo):[...arr,verseNo].sort((a,b)=>a-b);if(currentVerses.length&&st.verses[key].length===currentVerses.length)st.chapters[key]=true;else delete st.chapters[key];if(!st.verses[key].length)delete st.verses[key];savePlanReadingState();recordCumulative(id,key,st.verses[key]||[]);if(st.chapters[key])setTimeout(()=>{archiveIfComplete(id);dashboard();renderSavedPlans();renderCompletedPlans()},0)}
 
 function setActivePlan(id){
   activePlanId=id||'';
@@ -348,7 +356,7 @@ function view(id,planId){
   if(id!=='read'&&copyMode) toggleCopyMode(false);
   if(id==='home')dashboard();
   if(id==='missa'&&!missaLoaded)loadMissa();
-  if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}renderRangePreview();renderSavedPlans();syncPeriodFromAuto();preview();}
+  if(id==='plan'){onAutoModeChange();if($('autoEnd')&&!$('autoEnd').value){const d=new Date();d.setDate(d.getDate()+364);$('autoEnd').value=d.toISOString().slice(0,10)}renderRangePreview();renderSavedPlans();renderCompletedPlans();syncPeriodFromAuto();preview();}
   if(id==='notes'){renderNotes();try{renderOneLine();}catch(e){}}
   if(id==='stats')stats();
   if(id==='badges'){checkBadgeAwards();renderBadges();}
@@ -534,8 +542,8 @@ function extractVerses(html,bi=selectedBook,ch=selectedChapter){
   if(!verses.length)throw new Error('본문 절을 구분하지 못했습니다.');
   return verses;
 }
-async function loadChapter(force){copySel.clear();updateCopyBar();const b=books[selectedBook],key=b[3]+'/'+selectedChapter;$('verseBook').value=String(selectedBook);$('verseChapter').value=String(selectedChapter);$('chapterHeading').textContent=chLabel(selectedBook,selectedChapter);$('readerTitle').textContent=chLabel(selectedBook,selectedChapter);$('chapterStatus').textContent='본문 확인 중…';renderChapterGrid();try{let verses=!force?await cacheGet(key):null;if(!verses){const r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+selectedChapter);if(!r.ok)throw new Error('성경 본문 서버 응답 오류 ('+r.status+')');const html=await r.text();verses=extractVerses(html);await cachePut(key,verses)}currentVerses=verses;renderChapter();$('chapterStatus').textContent='본문 '+verses.length+'절 · '+(force?'공식 사이트에서 새로 가져와 저장했습니다.':'기기 저장본을 사용했습니다.')}catch(e){$('chapterStatus').textContent='본문을 불러오지 못했습니다: '+e.message;let cached=await cacheGet(key).catch(()=>null);if(cached){currentVerses=cached;renderChapter();$('chapterStatus').textContent='온라인 연결 실패 · 기기에 저장된 본문 '+cached.length+'절을 표시합니다.'}}}
-function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+(copyMode&&copySel.has(v.n)?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='오늘의 한 줄';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 오늘의 한 줄');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard();
+async function loadChapter(force){copySel.clear();selectSel.clear();updateCopyBar();updateSelectBar();const b=books[selectedBook],key=b[3]+'/'+selectedChapter;$('verseBook').value=String(selectedBook);$('verseChapter').value=String(selectedChapter);$('chapterHeading').textContent=chLabel(selectedBook,selectedChapter);$('readerTitle').textContent=chLabel(selectedBook,selectedChapter);$('chapterStatus').textContent='본문 확인 중…';renderChapterGrid();try{let verses=!force?await cacheGet(key):null;if(!verses){const r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+selectedChapter);if(!r.ok)throw new Error('성경 본문 서버 응답 오류 ('+r.status+')');const html=await r.text();verses=extractVerses(html);await cachePut(key,verses)}currentVerses=verses;renderChapter();$('chapterStatus').textContent='본문 '+verses.length+'절 · '+(force?'공식 사이트에서 새로 가져와 저장했습니다.':'기기 저장본을 사용했습니다.')}catch(e){$('chapterStatus').textContent='본문을 불러오지 못했습니다: '+e.message;let cached=await cacheGet(key).catch(()=>null);if(cached){currentVerses=cached;renderChapter();$('chapterStatus').textContent='온라인 연결 실패 · 기기에 저장된 본문 '+cached.length+'절을 표시합니다.'}}}
+function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+((copyMode&&copySel.has(v.n))||(selectMode&&selectSel.has(v.n))?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='오늘의 한 줄';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 오늘의 한 줄');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):selectMode?toggleSelectVerse(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard();
   try{
     const pct=currentVerses.length?Math.round(100*marked.length/currentVerses.length):0;
     const bar=$('readChProgressBar');
@@ -665,17 +673,19 @@ function updateChapterGridFoldMeta(){
 function fmtVerse(t){let h=safe(t),hide=store.hideNotes==='1';return h.replace(/(\d{1,3})\)/g,(m,d,off,str)=>{let p=str[off-1];if(!p||/[\s(\d]/.test(p))return m;return hide?'':'<sup class="fn">'+d+')</sup>'})}
 function toggleNotes(){store.hideNotes=$('hideNotes').checked?'1':'0';renderChapter()}
 async function prefetchBook(){let bi=selectedBook,b=books[bi],btn=$('prefetchBtn'),fail=0;btn.disabled=true;for(let c=1;c<=b[2];c++){$('chapterStatus').textContent=b[0]+' 내려받는 중… '+c+' / '+b[2]+unit(selectedBook);let key=b[3]+'/'+c;try{let v=await cacheGet(key);if(!v){let r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+c);if(!r.ok)throw new Error(r.status);v=extractVerses(await r.text(),bi,c);await cachePut(key,v);await new Promise(o=>setTimeout(o,300))}verseTotal[verseKey(bi,c)]=v.length}catch(e){fail++}}saveTotals();btn.disabled=false;$('chapterStatus').textContent=b[0]+' 내려받기 완료'+(fail?' · 실패 '+fail+unit(selectedBook)+' (다시 누르면 이어서 받습니다)':' · 오프라인에서도 읽을 수 있습니다.');renderChapter()}
+function addVerseShelf(type,nums,text=''){const now=new Date().toISOString(),ref=verseRefLabel(selectedBook,selectedChapter,nums);const existing=verseShelf.find(x=>x.type===type&&x.book===books[selectedBook][3]&&x.chapter===selectedChapter&&JSON.stringify(x.verses)===JSON.stringify(nums));if(existing){existing.updatedAt=now;if(text)existing.text=text}else verseShelf.unshift({id:'v'+Date.now()+Math.random().toString(36).slice(2,7),type,book:books[selectedBook][3],bookIndex:selectedBook,chapter:selectedChapter,verses:[...nums],reference:ref,text,createdAt:now,updatedAt:now});persistVerseShelf();renderVerseShelf();toast(type==='bookmark'?'책갈피를 저장했습니다.':type==='highlight'?'밑줄을 저장했습니다.':'메모를 저장했습니다.')}
+function saveSelectedShelf(type){const nums=[...selectSel].sort((a,b)=>a-b);if(!nums.length){toast('먼저 절을 선택해 주세요.');return}let text='';if(type==='note'){text=prompt('이 구절에 남길 메모를 입력하세요.')||'';if(!text)return}addVerseShelf(type,nums,text);clearSelectMode()}
+function renderVerseShelf(){const host=$('verseShelfList');if(!host)return;const q=($('verseShelfSearch')?.value||'').trim().toLowerCase(),type=$('verseShelfFilter')?.value||'all';const rows=verseShelf.filter(x=>(type==='all'||x.type===type)&&(!q||[x.reference,x.text,x.book].join(' ').toLowerCase().includes(q)));host.innerHTML=rows.length?rows.map(x=>'<article class="card"><b>'+safe(x.reference)+'</b><span class="small muted"> · '+({bookmark:'책갈피',highlight:'밑줄',note:'메모'}[x.type]||'기록')+'</span><p class="small">'+safe(x.text||'')+'</p><div class="row"><button type="button" class="alt" onclick="openReading('+x.bookIndex+','+x.chapter+')">본문 열기</button><button type="button" class="alt" onclick="deleteShelfRecord(&quot;'+safe(x.id)+'&quot;)">삭제</button></div></article>').join(''):'<p class="small muted">검색 결과가 없습니다. 구절을 선택해 책갈피·밑줄·메모를 남겨 보세요.</p>'}
+function deleteShelfRecord(id){verseShelf=verseShelf.filter(x=>x.id!==id);persistVerseShelf();renderVerseShelf()}
+function clearSelectMode(){selectSel.clear();if($('selectBar'))$('selectBar').classList.add('hidden');document.body.classList.remove('verse-select-mode');if($('selectModeBtn'))$('selectModeBtn').classList.remove('on');renderChapter()}
+function toggleSelectMode(force){selectMode=typeof force==='boolean'?force:!selectMode;selectSel.clear();document.body.classList.toggle('verse-select-mode',selectMode);$('selectModeBtn')?.classList.toggle('on',selectMode);$('selectBar')?.classList.toggle('hidden',!selectMode);if($('selectHint'))$('selectHint').classList.toggle('hidden',!selectMode);renderChapter()}
+function toggleSelectVerse(n){if(selectSel.has(n))selectSel.delete(n);else selectSel.add(n);updateSelectBar();renderChapter()}
+function updateSelectBar(){if($('selectCount'))$('selectCount').textContent=selectSel.size+'절 선택'}
+function archivePlan(planId){const p=savedPlans.find(x=>x.id===planId);if(!p)return;const pr=planProgress(p);if(pr.total&&pr.done>=pr.total){if(!completedPlans.some(x=>x.id===p.id)){completedPlans.push({...p,completedAt:new Date().toISOString()});persistCompletedPlans()}savedPlans=savedPlans.filter(x=>x.id!==p.id);persistPlans();dashboard();renderCompletedPlans()}}
+async function deleteCompletedPlan(id){if(!(await appConfirm('완료 기록을 영구 삭제할까요?','완료 기록 삭제')))return;completedPlans=completedPlans.filter(x=>x.id!==id);persistCompletedPlans();renderCompletedPlans()}
+function renderCompletedPlans(){const el=$('completedPlansList');if(!el)return;el.innerHTML=completedPlans.length?completedPlans.slice().reverse().map(p=>{const pr=planProgress({...p,id:p.id});return '<article class="card"><b>'+safe(p.name)+'</b><div class="small muted">완료 '+new Date(p.completedAt).toLocaleDateString('ko-KR')+' · '+(p.start||'')+' · '+pr.done+'/'+pr.total+' ('+pr.pct+'%)</div><div class="row"><button class="alt" onclick="deleteCompletedPlan(&quot;'+safe(p.id)+'&quot;)">기록 삭제</button></div></article>'}).join(''):'<p class="small muted">완료한 통독 계획이 여기에 보관됩니다.</p>'}
 function toggleVerse(v){const key=verseKey(selectedBook,selectedChapter);if(activeReadPlanId)togglePlanVerse(activeReadPlanId,key,v);else{const arr=verseRead[key]||[];verseRead[key]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v].sort((a,b)=>a-b);if(currentVerses.length&&verseRead[key].length===currentVerses.length)chapterRead[key]=true;else if(verseRead[key].length<currentVerses.length)chapterRead[key]=false;saveVerseData()}renderChapter()}
 
-function saveQuickReflect(){
-  const el=$('quickReflect');
-  if(!el) return;
-  const v=el.value.trim();
-  if(!v){ toast('묵상 내용을 입력해 주세요.'); return; }
-  addNote({verse:chLabel(selectedBook,selectedChapter),reflection:v});
-  el.value='';
-  toast('한 줄 묵상을 저장했습니다.');
-}
 let verseNoteTrigger=null, verseNotePreviousOverflow='';
 function openVerseNote(verseNo,trigger){
   const verse=currentVerses.find(item=>item.n===verseNo);
@@ -813,7 +823,7 @@ function markChapter(){
   const key=verseKey(selectedBook,selectedChapter);
   if(activeReadPlanId){
     const done=!planChapterDone(activeReadPlanId,key);
-    setPlanChapterDone(activeReadPlanId,key,done,done?currentVerses.map(v=>v.n):[]);
+    setPlanChapterDone(activeReadPlanId,key,done,done?currentVerses.map(v=>v.n):[]);if(done)setTimeout(()=>archivePlan(activeReadPlanId),0);
     rememberLastRead(selectedBook,selectedChapter,activeReadPlanId);
     // 누적·배지용 전역 장 기록도 함께 갱신
     if(done){ chapterRead[key]=true; if(currentVerses.length) verseRead[key]=currentVerses.map(v=>v.n); }
@@ -988,12 +998,16 @@ function dashboard(){
   const t=$('today');
   if(t) t.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
   try{ renderHomeTodayCta(); }catch(e){}
+  const picker=$('homeActivePlan');if(picker){picker.innerHTML=savedPlans.map(p=>'<option value="'+safe(p.id)+'">'+safe(p.name)+'</option>').join('');picker.value=(getActivePlan()?.id||'');picker.disabled=!savedPlans.length}
+  const resume=$('homeResumeRead');if(resume)resume.disabled=!getActivePlan()||!lastReadByPlan[getActivePlan().id];
+  const mass=$('homeMassSummary');if(mass){mass.innerHTML='<div class="row" style="justify-content:space-between;gap:10px"><div><b>오늘의 매일미사</b><p class="small muted" style="margin:4px 0">온라인에서 매일미사 본문을 확인합니다. 성경 통독 계획과 별도로 제공됩니다.</p></div><button type="button" class="alt" onclick="view(\'missa\')">매일미사 열기</button></div><p class="small muted" id="homeMassStatus">'+(missaLoaded?'매일미사 정보를 불러왔습니다.':'열기를 누르면 온라인에서 불러옵니다.')+'</p>'}
   renderHomePlans();
   // 와이어: 계획 0개면 ②·목록 안내는 숨기고 Primary CTA만
   const has=!!(savedPlans&&savedPlans.length);
   const sc=$('homePlanShortcut'); if(sc) sc.classList.toggle('hidden', !has);
   const hi=$('homeHint'); if(hi) hi.classList.toggle('hidden', !has);
   try{ renderOneLine(); }catch(e){}
+  try{renderCompletedPlans()}catch(e){}
 }
 function openPlanReading(planId, mode){
   setActivePlan(planId);
@@ -1493,7 +1507,6 @@ function completeToday(){
   completePlanToday(p.id);
 }
 
-function quickNote(){let v=$('quick').value.trim();if(!v)return;addNote({verse:chLabel(selectedBook,selectedChapter),reflection:v});$('quick').value='';toast('메모를 저장했습니다.')}
 function saveNote(){
   const refl=$('reflection').value.trim(), res=$('resolution').value.trim();
   if(!refl&&!res){ toast('묵상 내용을 입력해 주세요.'); return; }
@@ -2246,7 +2259,7 @@ function gatherBackup(){
     exportedAt:new Date().toISOString(),
     lastBackupAt:store.lastBackupAt||'',
     days, start, planType, customPeriods:customPeriodSet, customBooks:customBookSet,
-    savedPlans, activePlanId, lastReadByPlan, planReadingState, cumulativeReading,
+    savedPlans, completedPlans, verseShelf, activePlanId, lastReadByPlan, planReadingState, cumulativeReading,
     chapterRead, verseRead, verseTotal, notes, badgeAwards, badgeCompleteSnap,
     hideNotes: store.hideNotes||'0',
     reading:{
@@ -2259,13 +2272,15 @@ function gatherBackup(){
 /** 백업 객체 형태가 복원에 쓸 수 있는지 검사 (v1/v2 모두 허용) */
 function isValidBackup(data){
   if(!data||typeof data!=='object'||Array.isArray(data)) return false;
-  const hasReading=isPlainObj(data.chapterRead)||isPlainObj(data.verseRead)||isPlainObj(data.planReadingState)||isPlainObj(data.cumulativeReading);
+  const hasReading=isPlainObj(data.chapterRead)||isPlainObj(data.verseRead)||isPlainObj(data.planReadingState)||isPlainObj(data.cumulativeReading)||Array.isArray(data.verseShelf)||Array.isArray(data.completedPlans);
   const hasPlans=Array.isArray(data.savedPlans);
   const hasNotes=Array.isArray(data.notes);
   const hasMeta=data.days!=null||data.start!=null||data.planType!=null||data.v!=null;
   if(!(hasReading||hasPlans||hasNotes||hasMeta)) return false;
   if(data.savedPlans!=null&&!Array.isArray(data.savedPlans)) return false;
   if(data.notes!=null&&!Array.isArray(data.notes)) return false;
+  if(data.verseShelf!=null&&!Array.isArray(data.verseShelf)) return false;
+  if(data.completedPlans!=null&&!Array.isArray(data.completedPlans)) return false;
   if(data.chapterRead!=null&&!isPlainObj(data.chapterRead)) return false;
   if(data.verseRead!=null&&!isPlainObj(data.verseRead)) return false;
   if(data.planReadingState!=null&&!isPlainObj(data.planReadingState)) return false;
@@ -2286,6 +2301,7 @@ function snapshotCurrentForRecovery(){
 
 function exportData(){
   const data=gatherBackup();
+  data.completedPlans=completedPlans; data.verseShelf=verseShelf;
   data.lastBackupAt=new Date().toISOString();
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -2355,6 +2371,8 @@ async function applyBackup(data,opts){
   // v2 백업: 저장된 통독 계획 · 활성 계획 · 계획별 마지막 읽은 위치 · 읽기 설정
   // (v1 백업에는 없으므로, 없을 때는 현재 기기의 값을 그대로 둡니다)
   if(Array.isArray(data.savedPlans)){ savedPlans=data.savedPlans.slice(0,4); persistPlans(); }
+  completedPlans=Array.isArray(data.completedPlans)?data.completedPlans:[];persistCompletedPlans();
+  verseShelf=Array.isArray(data.verseShelf)?data.verseShelf:[];persistVerseShelf();
   if(data.activePlanId!=null) setActivePlan(data.activePlanId);
   if(data.lastReadByPlan&&typeof data.lastReadByPlan==='object'){ lastReadByPlan=data.lastReadByPlan; persistLastRead(); }
   if(data.cumulativeReading&&typeof data.cumulativeReading==='object'){cumulativeReading=data.cumulativeReading;persistCumulativeReading()}
@@ -2523,6 +2541,7 @@ function setCatchUp(planId,mode){
 
 // ===== [확장 2] 구절 복사 =====
 let copyMode=false; const copySel=new Set();
+let selectMode=false;const selectSel=new Set();
 function toast(msg,ms){
   let el=$('toast');
   if(!el){ el=document.createElement('div'); el.id='toast'; el.className='toast'; document.body.appendChild(el); }
@@ -2631,6 +2650,7 @@ function addNote(o){
   };
   notes.unshift(n); persistNotes();
   try{ renderOneLine(); }catch(e){}
+  try{renderCompletedPlans()}catch(e){}
   return n;
 }
 function isLineNote(n){

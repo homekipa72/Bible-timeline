@@ -489,7 +489,20 @@ function extractVerses(html,bi=selectedBook,ch=selectedChapter){
   return verses;
 }
 async function loadChapter(force){copySel.clear();updateCopyBar();const b=books[selectedBook],key=b[3]+'/'+selectedChapter;$('verseBook').value=String(selectedBook);$('verseChapter').value=String(selectedChapter);$('chapterHeading').textContent=chLabel(selectedBook,selectedChapter);$('readerTitle').textContent=chLabel(selectedBook,selectedChapter);$('chapterStatus').textContent='본문 확인 중…';renderChapterGrid();try{let verses=!force?await cacheGet(key):null;if(!verses){const r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+selectedChapter);if(!r.ok)throw new Error('성경 본문 서버 응답 오류 ('+r.status+')');const html=await r.text();verses=extractVerses(html);await cachePut(key,verses)}currentVerses=verses;renderChapter();$('chapterStatus').textContent='본문 '+verses.length+'절 · '+(force?'공식 사이트에서 새로 가져와 저장했습니다.':'기기 저장본을 사용했습니다.')}catch(e){$('chapterStatus').textContent='본문을 불러오지 못했습니다: '+e.message;let cached=await cacheGet(key).catch(()=>null);if(cached){currentVerses=cached;renderChapter();$('chapterStatus').textContent='온라인 연결 실패 · 기기에 저장된 본문 '+cached.length+'절을 표시합니다.'}}}
-function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+(copyMode&&copySel.has(v.n)?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='오늘의 한 줄';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 오늘의 한 줄');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard()}
+function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+(copyMode&&copySel.has(v.n)?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='오늘의 한 줄';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 오늘의 한 줄');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard();
+  try{
+    const pct=currentVerses.length?Math.round(100*marked.length/currentVerses.length):0;
+    const bar=$('readChProgressBar');
+    if(bar){
+      bar.setAttribute('aria-valuenow',String(pct));
+      bar.setAttribute('aria-label','이 장 읽음 '+pct+'%');
+      const span=bar.querySelector('span'); if(span) span.style.width=pct+'%';
+      bar.classList.toggle('is-done', !!chapterDone);
+    }
+    const meta=$('readSelectSummaryMeta');
+    if(meta) meta.textContent=chLabel(selectedBook,selectedChapter)+(chapterDone?' · 완료':' · '+marked.length+'/'+currentVerses.length+'절');
+  }catch(e){}
+}
 function saveTotals(){try{store.verseTotal_v1=JSON.stringify(verseTotal)}catch(e){}}
 function chStatus(b,c){let k=verseKey(b,c),done=activeReadPlanId?planChapterDone(activeReadPlanId,k):chapterRead[k],marks=activeReadPlanId?planVerseMarks(activeReadPlanId,k):(verseRead[k]||[]);return done?'done':(marks.length?'part':'todo')}
 function renderChapterGrid(){
@@ -505,6 +518,19 @@ function renderChapterGrid(){
       ' aria-label="'+c+unit(selectedBook)+' · '+state+(c===selectedChapter?' · 선택됨':'')+'"'+
       ' title="'+c+unit(selectedBook)+' · '+state+'">'+c+'</button>';
   }).join('');
+}
+function jumpToFirstUnread(){
+  const n=books[selectedBook][2];
+  let target=null;
+  for(let c=1;c<=n;c++){
+    if(chStatus(selectedBook,c)!=='done'){ target=c; break; }
+  }
+  if(target==null){
+    if(typeof toast==='function') toast('이 책은 모두 완료했습니다.');
+    return;
+  }
+  openChapterDetail(target);
+  if(typeof toast==='function') toast(chLabel(selectedBook,target)+'로 이동합니다.');
 }
 function openChapterDetail(c){
   selectChapter(+c);
@@ -2857,3 +2883,15 @@ document.addEventListener('click',function(e){ const m=$('badgeModal'); if(m&&!m
 document.addEventListener('DOMContentLoaded',function(){ try{ maybeShowOnboard(); }catch(e){} });
 
 try{ applyTheme(); }catch(e){}
+
+/* keydown-read-nav */
+document.addEventListener('keydown',function(e){
+  const read=$('read');
+  if(!read||read.classList.contains('hidden')) return;
+  if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if(e.key==='ArrowLeft'){ e.preventDefault(); moveChapter(-1); }
+  else if(e.key==='ArrowRight'){ e.preventDefault(); moveChapter(1); }
+  else if(e.key==='c'||e.key==='C'){
+    if(!e.metaKey&&!e.ctrlKey){ e.preventDefault(); markChapter(); }
+  }
+});

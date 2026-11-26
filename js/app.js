@@ -489,10 +489,36 @@ function extractVerses(html,bi=selectedBook,ch=selectedChapter){
   return verses;
 }
 async function loadChapter(force){copySel.clear();updateCopyBar();const b=books[selectedBook],key=b[3]+'/'+selectedChapter;$('verseBook').value=String(selectedBook);$('verseChapter').value=String(selectedChapter);$('chapterHeading').textContent=chLabel(selectedBook,selectedChapter);$('readerTitle').textContent=chLabel(selectedBook,selectedChapter);$('chapterStatus').textContent='본문 확인 중…';renderChapterGrid();try{let verses=!force?await cacheGet(key):null;if(!verses){const r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+selectedChapter);if(!r.ok)throw new Error('성경 본문 서버 응답 오류 ('+r.status+')');const html=await r.text();verses=extractVerses(html);await cachePut(key,verses)}currentVerses=verses;renderChapter();$('chapterStatus').textContent='본문 '+verses.length+'절 · '+(force?'공식 사이트에서 새로 가져와 저장했습니다.':'기기 저장본을 사용했습니다.')}catch(e){$('chapterStatus').textContent='본문을 불러오지 못했습니다: '+e.message;let cached=await cacheGet(key).catch(()=>null);if(cached){currentVerses=cached;renderChapter();$('chapterStatus').textContent='온라인 연결 실패 · 기기에 저장된 본문 '+cached.length+'절을 표시합니다.'}}}
-function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+(copyMode&&copySel.has(v.n)?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='기록';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 한 줄 기록');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard()}
+function renderChapter(){ try{updateMarkButtons()}catch(e){} let key=verseKey(selectedBook,selectedChapter),marked=activeReadPlanId?(planChapterDone(activeReadPlanId,key)?currentVerses.map(v=>v.n):planVerseMarks(activeReadPlanId,key)):(verseRead[key]||[]);let host=$('bibleText');host.innerHTML='';currentVerses.forEach(v=>{let row=document.createElement('div');row.className='bible-verse'+(marked.includes(v.n)?' read':'')+(copyMode&&copySel.has(v.n)?' sel':'');row.title=copyMode?'본문을 눌러 복사할 절 선택/해제':'본문을 누르면 읽음 표시가 바뀝니다';let num=document.createElement('span');num.className='num';num.textContent=v.n;let words=document.createElement('span');words.className='words';words.innerHTML=fmtVerse(v.text);let noteButton=document.createElement('button');noteButton.type='button';noteButton.className='verse-note-action';noteButton.textContent='오늘의 한 줄';noteButton.setAttribute('aria-label',verseRefLabel(selectedBook,selectedChapter,[v.n])+' 오늘의 한 줄');noteButton.onclick=event=>{event.preventDefault();event.stopPropagation();openVerseNote(v.n,noteButton)};row.append(num,words,noteButton);row.onclick=()=>copyMode?toggleCopySel(v.n):toggleVerse(v.n);host.appendChild(row)});let chapterDone=activeReadPlanId?planChapterDone(activeReadPlanId,key):!!chapterRead[key];$('chapterProgress').textContent=chLabel(selectedBook,selectedChapter)+' · '+marked.length+'/'+currentVerses.length+'절 읽음'+(chapterDone?' · 완료':'');if(currentVerses.length&&verseTotal[key]!==currentVerses.length){verseTotal[key]=currentVerses.length;saveTotals()}renderChapterGrid();applyTextStyle();dashboard()}
 function saveTotals(){try{store.verseTotal_v1=JSON.stringify(verseTotal)}catch(e){}}
-function chStatus(b,c){let k=verseKey(b,c),done=activeReadPlanId?planChapterDone(activeReadPlanId,k):chapterRead[k],marks=activeReadPlanId?planVerseMarks(activeReadPlanId,k):(verseRead[k]||[]);return done?'done':(marks.length?'part':'')}
-function renderChapterGrid(){let n=books[selectedBook][2];$('chapterGrid').innerHTML=Array.from({length:n},(_,i)=>{let c=i+1;return '<button class="'+chStatus(selectedBook,c)+(c===selectedChapter?' selected':'')+'" onclick="selectChapter('+c+')" aria-label="'+c+unit(selectedBook)+'">'+c+'</button>'}).join('')}
+function chStatus(b,c){let k=verseKey(b,c),done=activeReadPlanId?planChapterDone(activeReadPlanId,k):chapterRead[k],marks=activeReadPlanId?planVerseMarks(activeReadPlanId,k):(verseRead[k]||[]);return done?'done':(marks.length?'part':'todo')}
+function renderChapterGrid(){
+  const n=books[selectedBook][2];
+  const el=$('chapterGrid'); if(!el) return;
+  el.innerHTML=Array.from({length:n},(_,i)=>{
+    const c=i+1;
+    const st=chStatus(selectedBook,c);
+    const state=st==='done'?'완료':(st==='part'?'일부 읽음':'미완료');
+    const sel=c===selectedChapter?' selected':'';
+    return '<button type="button" class="ch-btn '+st+sel+'" data-ch="'+c+'"'+
+      ' onclick="openChapterDetail('+c+')"'+
+      ' aria-label="'+c+unit(selectedBook)+' · '+state+(c===selectedChapter?' · 선택됨':'')+'"'+
+      ' title="'+c+unit(selectedBook)+' · '+state+'">'+c+'</button>';
+  }).join('');
+}
+function openChapterDetail(c){
+  selectChapter(+c);
+  // 본문 영역으로 스크롤해 자세히 보기
+  const host=$('bibleText')||$('read');
+  if(host&&host.scrollIntoView){
+    try{ host.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ host.scrollIntoView(true); }
+  }
+  if($('chapterStatus')){
+    const st=chStatus(selectedBook,+c);
+    const state=st==='done'?'완료':(st==='part'?'일부 읽음':'미완료');
+    $('chapterStatus').textContent=chLabel(selectedBook,+c)+' · '+state+' · 본문을 표시합니다.';
+  }
+}
 function fmtVerse(t){let h=safe(t),hide=store.hideNotes==='1';return h.replace(/(\d{1,3})\)/g,(m,d,off,str)=>{let p=str[off-1];if(!p||/[\s(\d]/.test(p))return m;return hide?'':'<sup class="fn">'+d+')</sup>'})}
 function toggleNotes(){store.hideNotes=$('hideNotes').checked?'1':'0';renderChapter()}
 async function prefetchBook(){let bi=selectedBook,b=books[bi],btn=$('prefetchBtn'),fail=0;btn.disabled=true;for(let c=1;c<=b[2];c++){$('chapterStatus').textContent=b[0]+' 내려받는 중… '+c+' / '+b[2]+unit(selectedBook);let key=b[3]+'/'+c;try{let v=await cacheGet(key);if(!v){let r=await fetch('/api/bible?book='+encodeURIComponent(b[3])+'&chapter='+c);if(!r.ok)throw new Error(r.status);v=extractVerses(await r.text(),bi,c);await cachePut(key,v);await new Promise(o=>setTimeout(o,300))}verseTotal[verseKey(bi,c)]=v.length}catch(e){fail++}}saveTotals();btn.disabled=false;$('chapterStatus').textContent=b[0]+' 내려받기 완료'+(fail?' · 실패 '+fail+unit(selectedBook)+' (다시 누르면 이어서 받습니다)':' · 오프라인에서도 읽을 수 있습니다.');renderChapter()}
@@ -541,11 +567,13 @@ function closeVerseNote(){
 }
 function saveVerseNote(){
   const text=$('verseNoteInput').value.trim();
-  if(!text){toast('기록할 한 줄을 입력해 주세요.');$('verseNoteInput').focus();return}
+  if(!text){toast('마음에 남은 한 줄을 입력해 주세요.');$('verseNoteInput').focus();return}
   const ref=$('verseNoteRef').textContent;
-  addNote({verse:ref,reflection:text});
+  const body=($('verseNoteText')&&$('verseNoteText').textContent||'').replace(/^[“"]|[”"]$/g,'').trim();
+  addNote({verse:ref, verseText:body, reflection:text, kind:'line'});
   closeVerseNote();
-  toast(ref+'에 한 줄을 기록했습니다.');
+  try{ renderOneLine(); renderNotes(); }catch(e){}
+  toast('오늘의 한 줄로 저장했습니다.');
 }
 function updateMarkButtons(){
   const key=verseKey(selectedBook,selectedChapter);
@@ -602,7 +630,7 @@ function afterChapterMarked(done){
     bar.classList.remove('hidden');
     bar.innerHTML='<span class="small">'+safe(msg)+'</span> '+
       (nextLabel?'<button type="button" onclick="moveChapter(1)">다음 장</button>':'')+
-      ' <button type="button" class="alt" onclick="document.getElementById(\'quickReflect\')&&document.getElementById(\'quickReflect\').focus()">한 줄 묵상</button>'+
+      ' <button type="button" class="alt" onclick="view(\'notes\')">오늘의 한 줄</button>'+
       ' <button type="button" class="alt" onclick="this.parentElement.classList.add(\'hidden\')">닫기</button>';
   }
 }
@@ -1262,7 +1290,7 @@ function quickNote(){let v=$('quick').value.trim();if(!v)return;addNote({verse:c
 function saveNote(){
   const refl=$('reflection').value.trim(), res=$('resolution').value.trim();
   if(!refl&&!res){ toast('묵상 내용을 입력해 주세요.'); return; }
-  addNote({date:$('ndate').value,verse:$('verse').value.trim(),reflection:refl,resolution:res});
+  addNote({kind:'note',date:$('ndate').value,verse:$('verse').value.trim(),reflection:refl,resolution:res});
   $('verse').value=$('reflection').value=$('resolution').value='';
   renderNotes(); toast('묵상을 저장했습니다.');
 }
@@ -2357,15 +2385,33 @@ function normalizeNotes(){
 }
 function addNote(o){
   const nowIso=new Date().toISOString();
+  const kind=o.kind || (o.resolution ? 'note' : 'line');
   const n={
     id:newNoteId(), date:o.date||ymdLocal(new Date()), verse:o.verse||'',
-    reflection:o.reflection||'', resolution:o.resolution||'', created:nowIso, updated:nowIso
+    verseText:o.verseText||'',
+    reflection:o.reflection||'', resolution:o.resolution||'',
+    kind:kind,
+    created:nowIso, updated:nowIso
   };
   notes.unshift(n); persistNotes();
   try{ renderOneLine(); }catch(e){}
   return n;
 }
-function isLineNote(n){ return !n.resolution && String(n.reflection||'').length<=140 && !/\n/.test(n.reflection||''); }
+function isLineNote(n){
+  if(n&&n.kind==='line') return true;
+  if(n&&n.kind==='note') return false;
+  return !n.resolution && String(n.reflection||'').length<=140 && !/\n/.test(n.reflection||'');
+}
+function updateOneLineScripturePreview(){
+  const box=$('oneLineScripture'); if(!box) return;
+  const v=($('oneLineVerse')&&$('oneLineVerse').value||'').trim();
+  if(v){ box.textContent=v; box.classList.remove('muted'); }
+  else {
+    const last=lastReadLabel();
+    box.textContent=last?('최근 읽기: '+last+' · 구절을 입력하거나 성경 읽기에서 절을 선택하세요.'):'성경 읽기에서 절을 고르거나, 아래에서 구절을 적어 주세요.';
+    box.classList.add('muted');
+  }
+}
 function fmtDay(ds){
   const d=new Date((ds||'')+'T00:00:00');
   if(isNaN(d.getTime())) return '날짜 없음';
@@ -2387,27 +2433,38 @@ function noteStreak(){
 }
 function renderOneLine(){
   const box=$('oneLineRecent'); if(!box) return;
+  try{ updateOneLineScripturePreview(); }catch(e){}
   const v=$('oneLineVerse');
-  if(v&&!v.dataset.touched&&!v.value) v.value=lastReadLabel();
+  const lines=notes.filter(isLineNote).slice(0,8);
   const st=noteStreak();
   const today=ymdLocal(new Date());
-  const hasToday=notes.some(n=>n.date===today);
-  if($('oneLineStreak')) $('oneLineStreak').textContent=st>0?('연속 '+st+'일 기록'+(hasToday?'':' · 오늘 아직')):'오늘 첫 기록을 남겨 보세요';
-  const recent=notes.slice().sort((a,b)=>String(b.created).localeCompare(String(a.created))).slice(0,3);
-  if(!recent.length){ box.innerHTML=''; return; }
-  box.innerHTML=recent.map(n=>
-    '<div class="small" style="padding:6px 0;border-top:1px solid var(--line)"><span style="color:var(--gold)">'+safe((n.date||'').slice(5).replace('-','/'))+'</span>'+
-    (n.verse?' · <b>'+safe(n.verse)+'</b>':'')+' — '+safe(String(n.reflection||n.resolution||'').slice(0,80))+'</div>'
-  ).join('')+'<div style="margin-top:6px"><button type="button" class="alt" style="padding:5px 10px;font-size:12px" onclick="view(\'notes\')">전체 보기</button></div>';
+  const hasToday=notes.some(n=>isLineNote(n)&&(n.date===today));
+  if($('oneLineStreak')) $('oneLineStreak').textContent=st>0?('연속 '+st+'일'+(hasToday?'':' · 오늘 아직')):'오늘 첫 한 줄을 남겨 보세요';
+  if(!lines.length){
+    box.innerHTML='<p class="small muted" style="margin:0">아직 오늘의 한 줄이 없습니다. 성경 본문 절의 「오늘의 한 줄」로 남기거나 위에서 기록해 보세요.</p>';
+    return;
+  }
+  box.innerHTML='<div class="small" style="margin-bottom:6px;font-weight:600;color:var(--navy)">최근 한 줄</div>'+lines.map(n=>{
+    const scripture=n.verseText||n.verse||'';
+    return '<div class="one-line-item">'+
+      (scripture?'<div class="one-line-ref">'+safe(scripture)+'</div>':'')+
+      '<div class="one-line-body">'+safe(n.reflection||'')+'</div>'+
+      '<div class="small muted">'+safe(n.date||'')+(n.verse&&n.verseText?' · '+safe(n.verse):'')+'</div>'+
+    '</div>';
+  }).join('');
 }
 function saveOneLine(){
   const el=$('oneLine'); if(!el) return;
   const t=el.value.trim();
-  if(!t){ toast('한 줄을 입력해 주세요.'); el.focus(); return; }
-  addNote({verse:($('oneLineVerse').value||'').trim(),reflection:t});
+  if(!t){ toast('마음에 남은 한 줄을 입력해 주세요.'); return; }
+  const verse=($('oneLineVerse')&&$('oneLineVerse').value||'').trim() || lastReadLabel();
+  addNote({verse:verse, verseText:verse, reflection:t, kind:'line'});
   el.value='';
-  toast('기록했습니다. 연속 '+noteStreak()+'일째입니다.');
+  if($('oneLineVerse')){ $('oneLineVerse').value=verse; }
+  updateOneLineScripturePreview();
   renderOneLine();
+  try{ renderNotes(); }catch(e){}
+  toast('오늘의 한 줄로 저장했습니다.');
 }
 let noteFilter='all', noteEditId=null;
 function setNoteFilter(f){
@@ -2442,7 +2499,7 @@ function renderNotes(){
     if(noteFilter==='line'&&!isLineNote(n)) return false;
     if(noteFilter==='note'&&isLineNote(n)) return false;
     if(!q) return true;
-    return [n.verse,n.reflection,n.resolution,n.date].join(' ').toLowerCase().includes(q);
+    return [n.verse,n.verseText,n.reflection,n.resolution,n.date].join(' ').toLowerCase().includes(q);
   });
   const byDate=(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(b.created||'').localeCompare(String(a.created||''));
   if(sort==='upd') list.sort((a,b)=>String(b.updated||'').localeCompare(String(a.updated||'')));

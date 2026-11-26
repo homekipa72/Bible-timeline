@@ -497,3 +497,65 @@ html{
   line-height:1.55;
   margin:8px 18px 0;
 }
+
+/* Chapter grid status colors */
+.chaptergrid .ch-btn,
+.chaptergrid button{
+  min-width:40px; min-height:40px;
+  border:1px solid var(--line);
+  background:var(--soft-2);
+  color:var(--ink);
+}
+.chaptergrid .ch-btn.todo,
+.chaptergrid button:not(.done):not(.part){
+  background:#f3f0e8;
+  color:#5c564c;
+  border-color:#ddd6c8;
+}
+.chaptergrid .ch-btn.part,
+.chaptergrid button.part{
+  background:#e8f0fa;
+  color:#1e4d7b;
+  border-color:#b7c9e0;
+}
+.chaptergrid .ch-btn.done,
+.chaptergrid button.done{
+  background:#e5efe6;
+  color:#1e4d2b;
+  border-color:#a8c9ae;
+  font-weight:600;
+}
+.chaptergrid .ch-btn.selected,
+.chaptergrid button.selected{
+  outline:2px solid var(--gold);
+  outline-offset:1px;
+}
+.ch-legend{display:inline-flex;align-items:center;gap:4px;margin-left:8px}
+.ch-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.ch-dot.done{background:#5a9a6a}
+.ch-dot.part{background:#5a8ec4}
+.ch-dot.todo{background:#c5bdb0}
+
+.one-line-scripture{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:var(--soft);
+  border-left:3px solid var(--gold);
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+.one-line-item{
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+.one-line-item:last-child{border-bottom:none}
+.one-line-ref{
+  font-size:13px;
+  color:var(--navy);
+  font-weight:600;
+  margin-bottom:4px;
+}
+.one-line-body{line-height:1.45}
+.notes-line-card,.notes-meditation-card{margin-bottom:14px}
+.verse-note-action{font-size:12px;padding:2px 8px}

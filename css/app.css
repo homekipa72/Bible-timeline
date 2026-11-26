@@ -463,3 +463,37 @@ html{
   max-height:2.7em;
   overflow:hidden;
 }
+
+/* Badge share UI */
+.badge-share-panel{
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid color-mix(in srgb, var(--gold) 35%, var(--line));
+}
+.badge-share-hint{
+  margin:0 0 10px;
+  text-align:center;
+}
+.badge-share-actions{
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.badge-share-primary{
+  min-height:44px;
+  padding:10px 20px;
+  font-weight:600;
+  background:linear-gradient(180deg, #d4b44a 0%, var(--gold, #C9A227) 100%);
+  color:#1a1408;
+  border:1px solid color-mix(in srgb, #8a7020 40%, transparent);
+  border-radius:10px;
+}
+.badge-share-primary:disabled{
+  opacity:0.65;
+}
+.badge-modal-box .badge-sentence{
+  font-family:Georgia, "Noto Serif KR", serif;
+  font-size:1.05rem;
+  line-height:1.55;
+  margin:8px 18px 0;
+}

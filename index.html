@@ -466,10 +466,13 @@
     <p id="badgeModalSentence" class="badge-sentence"></p>
     <p class="small muted" id="badgeModalMeta" style="text-align:center;margin:10px 0 0"></p>
     <div class="badge-progress-bar" id="badgeModalBarWrap" style="margin-top:14px"><span id="badgeModalBar"></span></div>
-    <div class="row" style="margin-top:16px;justify-content:center;gap:8px;flex-wrap:wrap">
-      <button type="button" class="alt" onclick="closeBadgeModal()">닫기</button>
-      <button type="button" class="alt" id="badgeShareBtn" onclick="shareBadge()">증표 공유</button>
-      <button type="button" onclick="view('badges');closeBadgeModal()">증표함 보기</button>
+    <div class="badge-share-panel">
+      <p class="small muted badge-share-hint">카드 이미지와 구절 문장을 함께 공유합니다.</p>
+      <div class="row badge-share-actions">
+        <button type="button" class="badge-share-primary" id="badgeShareBtn" onclick="shareBadge()">증표 공유</button>
+        <button type="button" class="alt" onclick="closeBadgeModal()">닫기</button>
+        <button type="button" class="alt" onclick="view('badges');closeBadgeModal()">증표함 보기</button>
+      </div>
     </div>
   </div>
 </div>

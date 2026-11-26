@@ -324,124 +324,232 @@ function buildBadgeShareText(def, count){
   t+=nl+nl+'#말씀의길 #성경통독';
   return t;
 }
-/** 증표 카드 이미지 생성 (문장 + 증표 이름) */
+function wrapBadgeText(ctx, text, maxW){
+  const chars=String(text||'').split('');
+  let line='', lines=[];
+  for(const ch of chars){
+    const test=line+ch;
+    if(ctx.measureText(test).width>maxW && line){
+      lines.push(line);
+      line=ch;
+    } else line=test;
+  }
+  if(line) lines.push(line);
+  return lines;
+}
+/** 증표 공유 카드 — 양피지·인장 톤 */
 function renderBadgeShareCanvas(def, count){
-  const W=900, H=1200;
+  const W=1080, H=1350;
   const cv=document.createElement('canvas');
   cv.width=W; cv.height=H;
   const ctx=cv.getContext('2d');
-  // 배경
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#f7f1e4');
-  g.addColorStop(1,'#ebe3d2');
-  ctx.fillStyle=g;
+  const gold=def.accent||'#C9A227';
+  const navy='#172b43';
+  const cream='#f6f0e4';
+  const ink='#2a241c';
+
+  // 바탕
+  const bg=ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#faf6ee');
+  bg.addColorStop(0.55, cream);
+  bg.addColorStop(1,'#e8dfd0');
+  ctx.fillStyle=bg;
   ctx.fillRect(0,0,W,H);
-  // 테두리
-  ctx.strokeStyle=def.accent||'#C9A227';
-  ctx.lineWidth=8;
-  ctx.strokeRect(36,36,W-72,H-72);
-  ctx.strokeStyle='rgba(23,43,67,0.12)';
+
+  // 은은한 비네트
+  const vig=ctx.createRadialGradient(W/2,H*0.4,80,W/2,H*0.45,H*0.7);
+  vig.addColorStop(0,'rgba(255,255,255,0.35)');
+  vig.addColorStop(1,'rgba(120,100,70,0.08)');
+  ctx.fillStyle=vig;
+  ctx.fillRect(0,0,W,H);
+
+  // 이중 프레임
+  ctx.strokeStyle=gold;
+  ctx.lineWidth=10;
+  ctx.strokeRect(48,48,W-96,H-96);
+  ctx.strokeStyle='rgba(23,43,67,0.18)';
   ctx.lineWidth=2;
-  ctx.strokeRect(52,52,W-104,H-104);
-  // 상단
-  ctx.fillStyle='#172b43';
-  ctx.font='600 28px Georgia, "Noto Serif KR", serif';
+  ctx.strokeRect(68,68,W-136,H-136);
+  // 코너 장식
+  const corner=(x,y,sx,sy)=>{
+    ctx.beginPath();
+    ctx.moveTo(x, y+sy*28);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x+sx*28, y);
+    ctx.strokeStyle=gold;
+    ctx.lineWidth=3;
+    ctx.stroke();
+  };
+  corner(88,88,1,1); corner(W-88,88,-1,1); corner(88,H-88,1,-1); corner(W-88,H-88,-1,-1);
+
+  // 상단 eyebrow
+  ctx.fillStyle=navy;
   ctx.textAlign='center';
-  ctx.fillText('말씀의 길 · 순례의 증표', W/2, 120);
-  // 인장 원
-  const cx=W/2, cy=320, R=110;
+  ctx.font='600 26px Georgia, "Noto Serif KR", serif';
+  ctx.fillText('말씀의 길', W/2, 130);
+  ctx.fillStyle='rgba(23,43,67,0.55)';
+  ctx.font='500 22px "Noto Sans KR", sans-serif';
+  ctx.fillText('순례의 증표', W/2, 168);
+
+  // 구분선
+  ctx.strokeStyle='rgba(201,162,39,0.55)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(W/2-80, 190);
+  ctx.lineTo(W/2+80, 190);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W/2, 190, 3, 0, Math.PI*2);
+  ctx.fillStyle=gold;
+  ctx.fill();
+
+  // 인장
+  const cx=W/2, cy=360, R=128;
+  ctx.save();
+  ctx.shadowColor='rgba(23,43,67,0.12)';
+  ctx.shadowBlur=24;
+  ctx.shadowOffsetY=8;
   ctx.beginPath();
   ctx.arc(cx,cy,R,0,Math.PI*2);
   ctx.fillStyle='#fffdf8';
   ctx.fill();
-  ctx.lineWidth=6;
-  ctx.strokeStyle=def.accent||'#C9A227';
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.lineWidth=8;
+  ctx.strokeStyle=gold;
   ctx.stroke();
-  // 아이콘 글자 (이모지/심볼)
-  ctx.fillStyle=def.accent||'#172b43';
-  ctx.font='72px serif';
+  ctx.beginPath();
+  ctx.arc(cx,cy,R-14,0,Math.PI*2);
+  ctx.lineWidth=1.5;
+  ctx.strokeStyle='rgba(23,43,67,0.2)';
+  ctx.stroke();
+
+  ctx.fillStyle=gold;
+  ctx.font='80px Georgia, serif';
   ctx.textBaseline='middle';
-  const icon=(def.icon||'✦');
-  ctx.fillText(icon, cx, cy);
+  ctx.fillText(def.icon||'✦', cx, cy+4);
   ctx.textBaseline='alphabetic';
-  // 이름
-  ctx.fillStyle='#172b43';
-  ctx.font='700 48px Georgia, "Noto Serif KR", serif';
-  ctx.fillText(def.name, W/2, 480);
-  // 순례 횟수
-  const pil=pilgrimageLabel(count);
-  if(pil){
-    ctx.fillStyle='#6b5b3e';
-    ctx.font='500 28px "Noto Sans KR", sans-serif';
-    ctx.fillText(pil+(count>1?' · ×'+count:''), W/2, 530);
-  }
-  // 문장
-  const sentence='「'+(def.sentence||'')+'」';
-  ctx.fillStyle='#1a1a1a';
-  ctx.font='500 34px Georgia, "Noto Serif KR", serif';
-  const maxW=W-160;
-  const words=sentence.split('');
-  let line='', lines=[], y=620;
-  for(const ch of words){
-    const test=line+ch;
-    if(ctx.measureText(test).width>maxW && line){
-      lines.push(line); line=ch;
-    } else line=test;
-  }
-  if(line) lines.push(line);
-  lines=lines.slice(0,6);
-  for(const ln of lines){
+
+  // 증표 이름
+  ctx.fillStyle=navy;
+  ctx.font='700 52px Georgia, "Noto Serif KR", serif';
+  const nameLines=wrapBadgeText(ctx, def.name||'', W-200);
+  let y=540;
+  for(const ln of nameLines.slice(0,2)){
     ctx.fillText(ln, W/2, y);
-    y+=48;
+    y+=60;
+  }
+
+  // 순례 배지
+  const pil=pilgrimageLabel(count);
+  if(pil || (count&&count>1)){
+    const label=pil+(count>1?'  ·  ×'+count:'');
+    ctx.font='600 24px "Noto Sans KR", sans-serif';
+    const tw=ctx.measureText(label).width+48;
+    const bx=W/2-tw/2, by=y+8;
+    ctx.fillStyle='rgba(201,162,39,0.14)';
+    roundRect(ctx, bx, by, tw, 40, 20);
+    ctx.fill();
+    ctx.strokeStyle='rgba(201,162,39,0.55)';
+    ctx.lineWidth=1;
+    roundRect(ctx, bx, by, tw, 40, 20);
+    ctx.stroke();
+    ctx.fillStyle='#6b5b3e';
+    ctx.fillText(label, W/2, by+28);
+    y=by+70;
+  } else {
+    y+=24;
+  }
+
+  // 인용 박스
+  const quoteTop=Math.max(y+10, 700);
+  ctx.fillStyle='rgba(255,253,248,0.72)';
+  roundRect(ctx, 120, quoteTop, W-240, 280, 16);
+  ctx.fill();
+  ctx.strokeStyle='rgba(23,43,67,0.08)';
+  ctx.lineWidth=1;
+  roundRect(ctx, 120, quoteTop, W-240, 280, 16);
+  ctx.stroke();
+
+  ctx.fillStyle=gold;
+  ctx.font='italic 48px Georgia, serif';
+  ctx.fillText('"', 150, quoteTop+56);
+
+  ctx.fillStyle=ink;
+  ctx.font='500 32px Georgia, "Noto Serif KR", serif';
+  const sLines=wrapBadgeText(ctx, '「'+(def.sentence||'')+'」', W-300);
+  let sy=quoteTop+70;
+  for(const ln of sLines.slice(0,5)){
+    ctx.fillText(ln, W/2, sy);
+    sy+=44;
   }
   if(def.ref){
-    y+=12;
-    ctx.fillStyle='#6b5b3e';
-    ctx.font='400 26px "Noto Sans KR", sans-serif';
-    ctx.fillText('— '+def.ref, W/2, y);
+    ctx.fillStyle='rgba(42,36,28,0.65)';
+    ctx.font='400 24px "Noto Sans KR", sans-serif';
+    ctx.fillText('— '+def.ref, W/2, quoteTop+250);
   }
+
   // 하단
-  ctx.fillStyle='#8a7a5c';
-  ctx.font='400 22px "Noto Sans KR", sans-serif';
-  ctx.fillText('가톨릭 성경 통독', W/2, H-80);
+  ctx.strokeStyle='rgba(201,162,39,0.4)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(W/2-60, H-120);
+  ctx.lineTo(W/2+60, H-120);
+  ctx.stroke();
+  ctx.fillStyle='rgba(23,43,67,0.55)';
+  ctx.font='500 22px "Noto Sans KR", sans-serif';
+  ctx.fillText('가톨릭 성경 통독', W/2, H-84);
+  ctx.fillStyle='rgba(23,43,67,0.35)';
+  ctx.font='400 18px "Noto Sans KR", sans-serif';
+  let dateStr='';
+  try{ dateStr=new Date().toLocaleDateString('ko-KR'); }catch(e){}
+  if(dateStr) ctx.fillText(dateStr, W/2, H-56);
+
   return cv;
+}
+function roundRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
 }
 async function shareBadge(){
   if(!currentBadgeShare) return;
   const {def,count}=currentBadgeShare;
   const text=buildBadgeShareText(def, count);
+  const btn=$('badgeShareBtn');
+  if(btn){ btn.disabled=true; btn.textContent='준비 중…'; }
   let blob=null;
   try{
     const cv=renderBadgeShareCanvas(def, count||1);
-    blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+    blob=await new Promise(res=>cv.toBlob(res,'image/png',0.95));
   }catch(e){ console.warn('badge image', e); }
-  // 이미지 + 문장 공유
+  if(btn){ btn.disabled=false; btn.textContent='증표 공유'; }
   if(blob){
     try{
       const file=new File([blob],'malssumgil-badge-'+(def.id||'share')+'.png',{type:'image/png'});
       if(navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({
-          files:[file],
-          title:def.name+' · 순례의 증표',
-          text:text
-        });
+        await navigator.share({ files:[file], title:def.name+' · 순례의 증표', text:text });
         return;
       }
     }catch(e){ if(e&&e.name==='AbortError') return; }
-    // 파일 공유 불가 시 이미지 저장 + 문장 복사
     try{
       if(typeof saveBlobFile==='function'){
         const r=await saveBlobFile(blob,'malssumgil-badge-'+(def.id||'share')+'.png','말씀의 길 증표');
         if(r==='downloaded'||r==='shared'){
           try{ await navigator.clipboard.writeText(text); }catch(_){}
-          if(typeof toast==='function') toast('증표 이미지를 저장하고 문장을 복사했습니다');
-          else alert('증표 이미지를 저장했습니다. 문장도 클립보드에 복사했습니다.');
+          if(typeof toast==='function') toast('증표 카드 이미지를 저장했습니다');
+          else alert('증표 카드 이미지를 저장했습니다');
           return;
         }
       }
     }catch(e){}
   }
-  // 폴백: 텍스트만
   try{
     if(navigator.share){ await navigator.share({title:def.name, text:text}); return; }
   }catch(e){ if(e&&e.name==='AbortError') return; }

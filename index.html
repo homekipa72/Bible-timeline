@@ -50,7 +50,7 @@
   </div>
 </div>
 
-<p class="muted small" id="homeHint" style="margin:16px 0 8px">진행 중인 통독 계획 · 최대 5개</p>
+<p class="muted small" id="homeHint" style="margin:16px 0 8px">진행 중인 통독 계획 · 최대 4개</p>
 
 <!-- ③ 진행 중 계획 카드 -->
 <div id="homePlanList" class="home-plan-list"></div>
@@ -130,7 +130,7 @@
 <section id="plan" class="hidden"><div class="eyebrow">READING PLAN</div><div class="h1">나만의 통독 계획</div>
 
 <div class="card">
-<p class="muted">① 통독 이름 설정 → ② 통독 범위 → ③ 통독 시작일 → ④ 통독 기간 설정 순서로 진행한 뒤 계획을 저장합니다. 계획은 최대 5개까지 저장할 수 있습니다.</p>
+<p class="muted">① 통독 이름 설정 → ② 통독 범위 → ③ 통독 시작일 → ④ 통독 기간 설정 순서로 진행한 뒤 계획을 저장합니다. 계획은 최대 4개까지 저장할 수 있습니다.</p>
 
 <div style="margin-top:14px">
 <div class="small" style="font-weight:600;color:var(--navy);margin-bottom:6px">1. 통독 이름 설정</div>
@@ -212,7 +212,7 @@
 </div>
 
 <div class="card" style="margin-top:16px">
-<h3>저장된 통독 계획 <span class="small muted" id="planCountLabel">(0/5)</span></h3>
+<h3>저장된 통독 계획 <span class="small muted" id="planCountLabel">(0/4)</span></h3>
 <div id="savedPlansList"></div>
 </div>
 
@@ -325,23 +325,32 @@
     </div>
   </div>
 
-  <div id="testamentProgress" style="margin-top:16px"></div>
+  <div class="stats-otnt" style="margin-top:18px">
+    <h3 class="stats-subh">구약 · 신약 진도</h3>
+    <div id="testamentProgress" class="stats-otnt-bars"></div>
+    <div class="stats-otnt-charts">
+      <div class="stats-otnt-chart">
+        <div class="small muted" style="text-align:center;margin-bottom:6px">구약</div>
+        <div style="position:relative;height:150px"><canvas id="otChart" aria-label="구약 진도 차트"></canvas></div>
+      </div>
+      <div class="stats-otnt-chart">
+        <div class="small muted" style="text-align:center;margin-bottom:6px">신약</div>
+        <div style="position:relative;height:150px"><canvas id="ntChart" aria-label="신약 진도 차트"></canvas></div>
+      </div>
+    </div>
+  </div>
   <div class="hidden"><span id="sChapters">0</span></div>
 
-  <details id="chartDetails" open style="margin-top:16px">
+  <details id="chartDetails" style="margin-top:16px">
     <summary style="cursor:pointer;font-weight:600;color:var(--navy);list-style:none;display:flex;justify-content:space-between;align-items:center">
-      <span>시각화 차트</span><span class="small muted">접기/펼치기</span>
+      <span>시대 · 책별 차트</span><span class="small muted">접기/펼치기</span>
     </summary>
     <div style="margin-top:14px">
-      <h3 style="margin:0 0 8px;font-size:15px">구약 진도</h3>
-      <div style="position:relative;height:160px;max-width:240px;margin:0 auto"><canvas id="otChart"></canvas></div>
-      <h3 style="margin:16px 0 8px;font-size:15px">신약 진도</h3>
-      <div style="position:relative;height:160px;max-width:240px;margin:0 auto"><canvas id="ntChart"></canvas></div>
-      <h3 style="margin:18px 0 8px;font-size:15px">12시대 진도</h3>
-      <div style="position:relative;height:260px"><canvas id="periodChart"></canvas></div>
+      <h3 style="margin:0 0 8px;font-size:15px">12시대 진도</h3>
+      <div style="position:relative;height:260px"><canvas id="periodChart" aria-label="12시대 진도 차트"></canvas></div>
       <div id="periodProgress" class="small" style="margin-top:8px"></div>
       <h3 style="margin:18px 0 8px;font-size:15px">책별 완료 상위</h3>
-      <div style="position:relative;height:220px"><canvas id="bookChart"></canvas></div>
+      <div style="position:relative;height:220px"><canvas id="bookChart" aria-label="책별 완료율 차트"></canvas></div>
     </div>
   </details>
 
@@ -459,19 +468,19 @@
     <div class="badge-progress-bar" id="badgeModalBarWrap" style="margin-top:14px"><span id="badgeModalBar"></span></div>
     <div class="row" style="margin-top:16px;justify-content:center;gap:8px;flex-wrap:wrap">
       <button type="button" class="alt" onclick="closeBadgeModal()">닫기</button>
-      <button type="button" class="alt" id="badgeShareBtn" onclick="shareBadge()">문장 공유</button>
+      <button type="button" class="alt" id="badgeShareBtn" onclick="shareBadge()">증표 공유</button>
       <button type="button" onclick="view('badges');closeBadgeModal()">증표함 보기</button>
     </div>
   </div>
 </div>
 
 <nav class="bottom-nav" aria-label="주요 메뉴">
-  <button type="button" data-v="home" class="active" onclick="view('home')" aria-current="page"><span class="ico" aria-hidden="true">●</span>오늘</button>
-  <button type="button" data-v="missa" onclick="view('missa')"><span class="ico" aria-hidden="true">†</span>오늘의 말씀</button>
-  <button type="button" data-v="notes" onclick="view('notes')"><span class="ico" aria-hidden="true">✎</span>묵상</button>
-  <button type="button" data-v="badges" onclick="view('badges')"><span class="ico" aria-hidden="true">✦</span>인증</button>
-  <button type="button" data-v="stats" onclick="view('stats')"><span class="ico" aria-hidden="true">▤</span>통계</button>
-  <button type="button" data-v="settings" onclick="view('settings')"><span class="ico" aria-hidden="true">⚙</span>설정</button>
+  <button type="button" data-v="home" class="active" onclick="view('home')" aria-current="page"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.5 4 10.2V20h5.5v-5.5h5V20H20v-9.8L12 3.5z"/></svg><span class="nav-label">오늘</span></button>
+  <button type="button" data-v="missa" onclick="view('missa')"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 2h2v4h4v2h-4v12h-2V8H7V6h4V2z"/></svg><span class="nav-label">말씀</span></button>
+  <button type="button" data-v="notes" onclick="view('notes')"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h11l3 3v15H5V3zm10 2v2h2l-2-2zM7 10h10v2H7v-2zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg><span class="nav-label">묵상</span></button>
+  <button type="button" data-v="badges" onclick="view('badges')"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 9.5 8.5 3 9.2l5 4.4L6.5 20 12 16.8 17.5 20 16 13.6l5-4.4-6.5-.7L12 2z"/></svg><span class="nav-label">인증</span></button>
+  <button type="button" data-v="stats" onclick="view('stats')"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 19h2V9H5v10zm6 0h2V5h-2v14zm6 0h2v-7h-2v7z"/></svg><span class="nav-label">통계</span></button>
+  <button type="button" data-v="settings" onclick="view('settings')"><svg class="nav-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm8.1 2.1-1.2-.7.2-1.4-1.5-1.5-1.4.2-.7-1.2L14.3 5h-2.1l-.4 1.5-.7 1.2-1.4-.2-1.5 1.5.2 1.4-1.2.7L7 12.2v2.1l1.5.4 1.2.7-.2 1.4 1.5 1.5 1.4-.2.7 1.2.4 1.5h2.1l.4-1.5.7-1.2 1.4.2 1.5-1.5-.2-1.4 1.2-.7 1.5-.4v-2.1l-1.5-.4z"/></svg><span class="nav-label">설정</span></button>
 </nav>
 </div>
 <div class="modal hidden" id="cardModal" onclick="if(event.target===this)closeCard()" aria-hidden="true">

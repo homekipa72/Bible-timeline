@@ -405,3 +405,61 @@ html{
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
+
+/* Bottom nav refined icons */
+.bottom-nav button{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  min-width:44px;
+}
+.bottom-nav .nav-ico{
+  width:22px;
+  height:22px;
+  display:block;
+  opacity:0.9;
+}
+.bottom-nav button.active .nav-ico{
+  opacity:1;
+}
+.bottom-nav .nav-label{
+  font-size:10px;
+  letter-spacing:-0.02em;
+  line-height:1.1;
+}
+.bottom-nav button .ico{display:none}
+
+/* Stats screen */
+.stats-subh{margin:0 0 10px;font-size:15px;color:var(--navy)}
+.stats-otnt-bars{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+.stats-bar-block .progress{margin-top:6px}
+.stats-otnt-charts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  align-items:start;
+}
+.stats-otnt-mini{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+.stats-otnt-mini .progress{margin-top:4px}
+.stats-book-row{margin:6px 0;font-size:13px}
+.stats-empty{padding:4px 0}
+@media (max-width:640px){
+  .stats-otnt-charts{grid-template-columns:1fr}
+  .stats-otnt-mini{grid-template-columns:1fr}
+}
+
+.badge-card .badge-verse{
+  display:block;
+  margin:4px 2px 0;
+  font-size:11px;
+  line-height:1.35;
+  max-height:2.7em;
+  overflow:hidden;
+}

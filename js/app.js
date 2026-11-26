@@ -4,7 +4,7 @@ let planType=store.planType||'all';
 let customPeriodSet=jget('customPeriods',[1,2,3,4,5,6,7,8,9,10,11,12],Array.isArray);
 let customBookSet=jget('customBooks',null);
 if(!Array.isArray(customBookSet)) customBookSet=[...Array(books.length).keys()];
-// 저장된 통독 계획 (최대 5개)
+// 저장된 통독 계획 (최대 4개)
 let savedPlans=[];
 try{ savedPlans=JSON.parse(store.savedPlans||'[]'); if(!Array.isArray(savedPlans)) savedPlans=[]; }catch(e){ savedPlans=[]; }
 // 구버전 단일 계획 마이그레이션
@@ -21,7 +21,7 @@ if(!savedPlans.length && store.planType && store.start){
   if(!Array.isArray(savedPlans[0].customBookSet)) savedPlans[0].customBookSet=[...Array(books.length).keys()];
   store.savedPlans=JSON.stringify(savedPlans);
 }
-if(savedPlans.length>5){ savedPlans=savedPlans.slice(0,5); store.savedPlans=JSON.stringify(savedPlans); }
+if(savedPlans.length>4){ savedPlans=savedPlans.slice(0,4); store.savedPlans=JSON.stringify(savedPlans); }
 let planSkipSundays=false; // 기간 설정: 주일 제외 배분
 let planCalendarDays=365; // 주일 제외 전 전체 달력 일수
 function persistPlans(){ store.savedPlans=JSON.stringify(savedPlans); }
@@ -682,7 +682,7 @@ function renderHomePlans(){
     el.innerHTML=
       '<div class="card home-plan-empty">'+
         '<p class="muted" style="margin:0 0 6px">진행 중인 통독 계획이 없습니다.</p>'+
-        '<p class="small muted" style="margin:0 0 12px">통독 계획 만들기로 범위·기간을 정해 보세요. (최대 5개)</p>'+
+        '<p class="small muted" style="margin:0 0 12px">통독 계획 만들기로 범위·기간을 정해 보세요. (최대 4개)</p>'+
         '<button type="button" onclick="view(\'plan\')">통독 계획 만들기</button>'+
       '</div>';
     return;
@@ -835,6 +835,7 @@ function completePlanToday(planId){
   savePlanReadingState();
   dashboard();
   renderReadPlanPreview();
+  try{ checkBadgeAwards(); if($('badgeGrid')) renderBadges(); }catch(e){}
   appAlert('「'+p.name+'」 오늘 분량 '+items.length+'개를 완료로 기록했습니다.');
 }
 function renderReadPlanPreview(){
@@ -1031,7 +1032,7 @@ function renderSavedPlans(){
   try{ renderIcsOptions(); }catch(e){}
   const el=$('savedPlansList');
   const lab=$('planCountLabel');
-  if(lab) lab.textContent='('+savedPlans.length+'/5)';
+  if(lab) lab.textContent='('+savedPlans.length+'/4)';
   if(!el) return;
   if(!savedPlans.length){
     el.innerHTML='<p class="muted small">아직 저장된 계획이 없습니다.</p>';
@@ -1220,8 +1221,8 @@ function savePlan(){
     return;
   }
   const existing=editingPlanId?savedPlans.find(x=>x.id===editingPlanId):null;
-  if(!existing&&savedPlans.length>=5){
-    appAlert('통독 계획은 최대 5개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
+  if(!existing&&savedPlans.length>=4){
+    appAlert('통독 계획은 최대 4개까지 저장할 수 있습니다. 기존 계획을 삭제한 뒤 다시 저장해 주세요.');
     renderSavedPlans();return;
   }
   const enteredName=$('planName')?$('planName').value.trim():'';
@@ -1249,7 +1250,7 @@ function savePlan(){
   dashboard();
   renderHomePlans();
   preview();
-  appAlert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/5)');
+  appAlert('「'+name+'」 계획을 저장했습니다. ('+savedPlans.length+'/4)');
 }
 function completeToday(){
   const p=getActivePlan()||savedPlans[0];
@@ -1793,88 +1794,162 @@ function planTypeLabel(t){
   return ({all:'전체통독',ot:'구약',nt:'신약',chrono:'연대기별',psalms:'시편',gospels:'복음서',custom:'연대기별',customBooks:'개별 선택'})[t]||t||'전체통독';
 }
 function renderPlanItemProgress(){
-  const box=$('planItemProgress'),label=$('planProgressLabel');if(!box)return;
-  if(label) label.textContent='위는 진행 중인 각 계획의 통계, 아래는 지금까지의 전체 누적 통독 통계입니다.';
+  const box=$('planItemProgress');
+  const label=$('planProgressLabel');
+  if(!box) return;
+  if(label) label.textContent='진행 중인 계획별 통계와, 지금까지의 전체 누적 통독 통계를 확인합니다.';
+
   if(!savedPlans.length){
-    box.innerHTML='<p class="muted small">저장된 통독 계획이 없습니다. 통독 계획에서 새 계획을 만들어 주세요.</p><p style="margin-top:8px"><button type="button" onclick="view(\'plan\')">통독 계획 열기</button></p>';
+    box.innerHTML=
+      '<div class="stats-empty">'+
+        '<p class="muted" style="margin:0 0 8px">저장된 통독 계획이 없습니다.</p>'+
+        '<p class="small muted" style="margin:0 0 12px">오늘의 통독에서 계획을 만들면 여기에 계획별 진도가 표시됩니다.</p>'+
+        '<button type="button" onclick="view(\'home\')">오늘의 통독으로</button>'+
+      '</div>';
     return;
   }
-  let html='';
-  for(const p of savedPlans){
-    const pr=planProgress(p); const otnt=planOtNtProgress(p);
+
+  box.innerHTML=savedPlans.map(p=>{
+    const pr=planProgress(p);
+    const otnt=planOtNtProgress(p);
     const today=todayItemsForPlan(p);
     const todayDone=today.filter(x=>x.done).length;
     const stClass=pr.status.indexOf('완료')>=0?'done':(pr.backlog&&pr.backlog.length?'warn':'');
+
     const byBook=new Map();
-    for(const it of pr.seq){
+    for(const it of (pr.seq||[])){
       if(!byBook.has(it.book)) byBook.set(it.book,{done:0,total:0});
-      const row=byBook.get(it.book); row.total++;
-      if(planChapterDone(p.id,verseKey(it.book,it.chapter))) row.done++;
+      const row=byBook.get(it.book);
+      row.total++;
+      if(planChapterDone(p.id, verseKey(it.book,it.chapter))) row.done++;
     }
     const bookRows=[...byBook.entries()].sort((a,b)=>a[0]-b[0]).map(([bi,row])=>{
       const bp=row.total?Math.round(row.done/row.total*100):0;
-      return '<div class="small" style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>'+safe(books[bi][0])+'</span><span class="muted">'+row.done+'/'+row.total+' · '+bp+'%</span></div><div class="progress"><span style="width:'+bp+'%"></span></div></div>';
+      return '<div class="stats-book-row">'+
+        '<div class="row" style="justify-content:space-between"><span>'+safe(books[bi][0])+'</span>'+
+        '<span class="muted">'+row.done+'/'+row.total+' · '+bp+'%</span></div>'+
+        '<div class="progress"><span style="width:'+bp+'%"></span></div></div>';
     }).join('');
-    html+='<article class="stats-plan-card">'+
+
+    return '<article class="stats-plan-card">'+
       '<div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start">'+
-        '<div><b style="color:var(--navy)">'+safe(p.name)+'</b>'+
-        '<div class="small muted" style="margin-top:3px">'+safe(planTypeLabel(p.planType))+' · '+safe(p.start||'')+' 시작'+(pr.endStr?' · '+pr.endStr+'까지':'')+(p.skipSundays?' · 주일 제외':'')+'</div></div>'+
+        '<div>'+
+          '<b style="color:var(--navy)">'+safe(p.name)+'</b>'+
+          '<div class="small muted" style="margin-top:3px">'+
+            safe(planTypeLabel(p.planType))+' · '+safe(p.start||'')+' 시작'+
+            (pr.endStr?' · '+pr.endStr+'까지':'')+
+            (p.skipSundays?' · 주일 제외':'')+
+          '</div>'+
+        '</div>'+
         '<span class="status '+stClass+'">'+safe(pr.status)+'</span>'+
       '</div>'+
-      '<div class="row" style="margin-top:10px;justify-content:space-between"><span><b>'+pr.done+'</b><span class="muted"> / '+pr.total+'장</span></span><span class="muted">'+pr.pct+'%</span></div>'+
-      '<div class="progress" style="margin-top:6px"><span style="width:'+pr.pct+'%"></span></div>'+
+      '<div class="row" style="margin-top:10px;justify-content:space-between">'+
+        '<span><b>'+pr.done+'</b><span class="muted"> / '+pr.total+'장</span></span>'+
+        '<span class="muted">'+pr.pct+'%</span>'+
+      '</div>'+
+      '<div class="progress" style="margin-top:6px" role="progressbar" aria-valuenow="'+pr.pct+'" aria-valuemin="0" aria-valuemax="100" aria-label="'+safe(p.name)+' '+pr.pct+'%"><span style="width:'+pr.pct+'%"></span></div>'+
+      '<div class="stats-otnt-mini">'+
+        '<div><span class="small">구약</span> <span class="muted">'+otnt.otD+'/'+otnt.otT+' · '+otnt.otP+'%</span>'+
+        '<div class="progress"><span style="width:'+otnt.otP+'%;background:var(--navy)"></span></div></div>'+
+        '<div><span class="small">신약</span> <span class="muted">'+otnt.ntD+'/'+otnt.ntT+' · '+otnt.ntP+'%</span>'+
+        '<div class="progress"><span style="width:'+otnt.ntP+'%;background:var(--gold)"></span></div></div>'+
+      '</div>'+
       '<div class="row small" style="margin-top:10px;gap:12px;flex-wrap:wrap">'+
-        '<span>오늘 분량 <b>'+todayDone+'/'+today.length+'</b></span>'+
-        '<span>밀린 분량 <b>'+(pr.backlog?pr.backlog.length:0)+'</b></span>'+
+        '<span>오늘 <b>'+todayDone+'/'+today.length+'</b></span>'+
+        '<span>밀림 <b>'+(pr.backlog?pr.backlog.length:0)+'</b></span>'+
         (pr.skipped?'<span>건너뜀 <b>'+pr.skipped+'</b></span>':'')+
       '</div>'+
       '<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">'+
-        '<button type="button" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')">성경 읽기</button>'+
+        '<button type="button" data-plan-id="'+safe(p.id)+'" onclick="openPlanReading(this.dataset.planId,\'today\')" aria-label="'+safe(p.name)+' 성경 읽기">성경 읽기</button>'+
       '</div>'+
-      '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">책별 진도 · 오늘 목록</summary>'+
-        '<div style="margin-top:8px">'+bookRows+
-        (today.length?'<div class="small" style="margin-top:10px"><b>오늘</b> · '+today.map(it=>safe(it.label)+(it.done?' ✓':'')).join(' · ')+'</div>':'')+
-        '</div></details>'+
-    '<div style="margin-top:10px">'+'<div class="small" style="display:flex;justify-content:space-between"><span>구약</span><span class="muted">'+otnt.otD+'/'+otnt.otT+' · '+otnt.otP+'%</span></div>'+'<div class="progress" style="margin:4px 0 8px"><span style="width:'+otnt.otP+'%;background:var(--navy)"></span></div>'+'<div class="small" style="display:flex;justify-content:space-between"><span>신약</span><span class="muted">'+otnt.ntD+'/'+otnt.ntT+' · '+otnt.ntP+'%</span></div>'+'<div class="progress" style="margin:4px 0"><span style="width:'+otnt.ntP+'%;background:var(--gold)"></span></div>'+'</div></article>';
-  }
-  box.innerHTML=html;
+      (bookRows
+        ? '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">책별 진도 · 오늘 목록</summary>'+
+          '<div style="margin-top:8px">'+bookRows+
+          (today.length?'<div class="small" style="margin-top:10px"><b>오늘</b> · '+today.map(it=>safe(it.label)+(it.done?' ✓':'')).join(' · ')+'</div>':'')+
+          '</div></details>'
+        : '')+
+    '</article>';
+  }).join('');
 }
 function stats(){
-  // 모바일에서는 차트 기본 접기, 데스크톱은 펼침
-  if($('chartDetails')) $('chartDetails').open=window.innerWidth>=760;
+  if($('chartDetails')) $('chartDetails').open = window.innerWidth >= 760;
   updateCharts();
   renderPlanItemProgress();
-  const total=Math.max(1,totalChapters());
-  const doneKeys=Object.keys(chapterRead).filter(k=>chapterRead[k]);
-  const pct=Math.round(doneKeys.length/total*100);
-  if($('sDone')) $('sDone').textContent=doneKeys.length;
-  if($('sPct')) $('sPct').textContent=pct+'%';
-  if($('sNotes')) $('sNotes').textContent=notes.length;
-  let keys=Object.keys(verseRead);
-  if($('sVerses')) $('sVerses').textContent=keys.reduce((n,k)=>n+(verseRead[k]||[]).length,0);
-  if($('sChapters')) $('sChapters').textContent=doneKeys.length;
-  if($('sBooks')) $('sBooks').textContent=new Set([...keys,...doneKeys].map(k=>k.split(':')[0])).size;
-  const cumDone=Object.values(cumulativeReading).filter(r=>r&&r.done);
-  const uniqueKeys=new Set(cumDone.map(r=>r.key));
-  if($('sCumPlanCh')) $('sCumPlanCh').textContent=cumDone.length;
-  if($('sCumUnique')) $('sCumUnique').textContent=uniqueKeys.size;
+
+  const total = Math.max(1, totalChapters());
+  const doneKeys = Object.keys(chapterRead).filter(k => chapterRead[k]);
+  const pct = Math.round(doneKeys.length / total * 100);
+  const verseKeys = Object.keys(verseRead);
+  const verseCount = verseKeys.reduce((n,k)=>n+(verseRead[k]||[]).length, 0);
+  const bookSet = new Set([...verseKeys, ...doneKeys].map(k => k.split(':')[0]));
+
+  if($('sDone')) $('sDone').textContent = doneKeys.length;
+  if($('sPct')) $('sPct').textContent = pct + '%';
+  if($('sNotes')) $('sNotes').textContent = (typeof notes!=='undefined'&&notes)?notes.length:0;
+  if($('sVerses')) $('sVerses').textContent = verseCount;
+  if($('sChapters')) $('sChapters').textContent = doneKeys.length;
+  if($('sBooks')) $('sBooks').textContent = bookSet.size;
+
+  let cumDone = [];
+  try{ cumDone = Object.values(cumulativeReading||{}).filter(r=>r&&r.done); }catch(e){ cumDone=[]; }
+  const uniqueKeys = new Set(cumDone.map(r=>r.key));
+  if($('sCumPlanCh')) $('sCumPlanCh').textContent = cumDone.length;
+  if($('sCumUnique')) $('sCumUnique').textContent = uniqueKeys.size;
+
   if($('overallRing')) $('overallRing').style.setProperty('--pct', String(pct));
-  if($('overallRingCaption')) $('overallRingCaption').textContent=doneKeys.length+' / '+totalChapters()+'장';
-  
-  const chKeys=doneKeys;
-  const bset=[...new Set([...keys,...doneKeys].map(k=>+k.split(':')[0]))].filter(b=>b>=0&&b<books.length).sort((a,b)=>a-b);
-  let rows=bset.map(b=>{
-    let d=chKeys.filter(k=>k.startsWith(b+':')).length,t=books[b][2],v=keys.filter(k=>k.startsWith(b+':')).reduce((n,k)=>n+verseRead[k].length,0),known=0,all=true;
-    for(let c=1;c<=t;c++){let x=verseTotal[verseKey(b,c)];if(x)known+=x;else all=false}
-    return '<div style="margin:10px 0"><b>'+safe(books[b][0])+'</b> · '+d+' / '+t+unit(b)+' · '+v+(all?' / '+known:'')+'절<div class="progress"><span style="width:'+Math.round(d/t*100)+'%"></span></div></div>';
+  if($('overallRingCaption')) $('overallRingCaption').textContent = doneKeys.length + ' / ' + totalChapters() + '장';
+
+  // 구약·신약 텍스트 바 (차트와 병행)
+  let otD=0, otT=0, ntD=0, ntT=0;
+  for(let bi=0; bi<books.length; bi++){
+    const n=books[bi][2];
+    if(bi<46) otT+=n; else ntT+=n;
+    for(let c=1;c<=n;c++){
+      if(chapterRead[verseKey(bi,c)]){
+        if(bi<46) otD++; else ntD++;
+      }
+    }
+  }
+  const otP = otT?Math.round(100*otD/otT):0;
+  const ntP = ntT?Math.round(100*ntD/ntT):0;
+  if($('testamentProgress')){
+    $('testamentProgress').innerHTML =
+      '<div class="stats-bar-block">'+
+        '<div class="row" style="justify-content:space-between"><span><b>구약</b></span><span class="muted">'+otD+' / '+otT+'장 · '+otP+'%</span></div>'+
+        '<div class="progress" role="progressbar" aria-valuenow="'+otP+'" aria-valuemin="0" aria-valuemax="100" aria-label="구약 '+otP+'%"><span style="width:'+otP+'%;background:var(--navy)"></span></div>'+
+      '</div>'+
+      '<div class="stats-bar-block">'+
+        '<div class="row" style="justify-content:space-between"><span><b>신약</b></span><span class="muted">'+ntD+' / '+ntT+'장 · '+ntP+'%</span></div>'+
+        '<div class="progress" role="progressbar" aria-valuenow="'+ntP+'" aria-valuemin="0" aria-valuemax="100" aria-label="신약 '+ntP+'%"><span style="width:'+ntP+'%;background:var(--gold)"></span></div>'+
+      '</div>';
+  }
+
+  // 책별 장·절 상세
+  const chKeys = doneKeys;
+  const bset = [...new Set([...verseKeys, ...doneKeys].map(k=>+k.split(':')[0]))]
+    .filter(b=>b>=0&&b<books.length).sort((a,b)=>a-b);
+  const rows = bset.map(b=>{
+    const d = chKeys.filter(k=>k.startsWith(b+':')).length;
+    const t = books[b][2];
+    const v = verseKeys.filter(k=>k.startsWith(b+':')).reduce((n,k)=>n+(verseRead[k]||[]).length,0);
+    let known=0, all=true;
+    for(let c=1;c<=t;c++){ const x=verseTotal[verseKey(b,c)]; if(x) known+=x; else all=false; }
+    return '<div style="margin:10px 0"><b>'+safe(books[b][0])+'</b> · '+d+' / '+t+unit(b)+' · '+v+(all?' / '+known:'')+'절'+
+      '<div class="progress"><span style="width:'+Math.round(d/t*100)+'%"></span></div></div>';
   }).join('');
-  let detail=keys.sort((a,b)=>{let [ab,ac]=a.split(':').map(Number),[bb,bc]=b.split(':').map(Number);return ab-bb||ac-bc}).map(k=>{
-    let [b,c]=k.split(':').map(Number);
+  const detail = verseKeys.sort((a,b)=>{
+    const [ab,ac]=a.split(':').map(Number), [bb,bc]=b.split(':').map(Number);
+    return ab-bb||ac-bc;
+  }).map(k=>{
+    const [b,c]=k.split(':').map(Number);
     return '<div>'+safe(books[b][0])+' '+c+unit(b)+': '+(verseRead[k]||[]).slice().sort((a,b)=>a-b).join(', ')+'절'+(chapterRead[k]?' · 완료':'')+'</div>';
   }).join('');
-  if($('verseHistory')) $('verseHistory').innerHTML=rows?rows+'<details><summary>장별 상세 보기</summary>'+detail+'</details>':'아직 장·절 통독 기록이 없습니다.';
+  if($('verseHistory')){
+    $('verseHistory').innerHTML = rows
+      ? rows+'<details style="margin-top:8px"><summary>장별 상세 보기</summary>'+detail+'</details>'
+      : '아직 장·절 통독 기록이 없습니다.';
+  }
 }
-
 
 function pushRecoveryBackup(snapshot){
   let list=[];

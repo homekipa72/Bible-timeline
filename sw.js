@@ -4,7 +4,7 @@
  * - 매일미사(/api/missa)는 원문에서 실시간 조회하며 저장하지 않습니다.
  * - 앱 파일을 바꿀 때는 CACHE_VERSION 숫자를 올리면 이전 캐시가 정리됩니다.
  */
-const CACHE_VERSION = 'v31';
+const CACHE_VERSION = 'v32';
 const CACHE_NAME = 'malssumgil-shell-' + CACHE_VERSION;
 const CHART_URL = '/js/vendor/chart.umd.min.js';
 const SHELL = [
@@ -56,8 +56,12 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        const cache = await caches.open(CACHE_NAME);
-        cache.put('/', fresh.clone()).catch(() => {});
+        const path = new URL(req.url).pathname;
+        const contentType = fresh.headers.get('content-type') || '';
+        if (fresh.ok && contentType.includes('text/html') && (path === '/' || path === '/index.html')) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put('/', fresh.clone()).catch(() => {});
+        }
         return fresh;
       } catch (e) {
         const cache = await caches.open(CACHE_NAME);

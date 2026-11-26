@@ -6,7 +6,7 @@
 const store=(function(){
   const mem=Object.create(null);
   let real=null,warned=false;
-  try{ real=window.localStorage; real.setItem('__mg_probe','1'); real.removeItem('__mg_probe'); }catch(e){ real=null; }
+  try{ real=window.localStorage; const probe='__mg_probe_'+Math.random().toString(36).slice(2); real.setItem(probe,'1'); real.removeItem(probe); }catch(e){ real=null; }
   function warn(msg){ if(warned)return; warned=true; try{ if(typeof toast==='function')toast(msg); }catch(e){} }
   if(!real) setTimeout(()=>warn('이 브라우저에서는 저장이 막혀 있어, 화면을 닫으면 기록이 사라집니다. 백업을 내려받아 주세요.'),1500);
   const api={

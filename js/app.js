@@ -64,20 +64,8 @@ function rememberLastRead(bi, ch, planId){
 
 function planPaceMode(p){ return (p && p.paceMode)==='flexible'?'flexible':'fixed'; }
 function adjustFlexiblePlan(p){
-  if(!p || planPaceMode(p)!=='flexible') return false;
-  const pr=planProgress(p);
-  if(!pr || !pr.backlog || !pr.backlog.length) return false;
-  // extend calendar so backlog can be absorbed: add backlog length in reading days
-  const extra=pr.backlog.length;
-  if(p.skipSundays){
-    p.calendarDays=(p.calendarDays||p.days||1)+extra;
-  } else {
-    p.days=(p.days||1)+extra;
-  }
-  // persist
-  const idx=savedPlans.findIndex(x=>x.id===p.id);
-  if(idx>=0){ savedPlans[idx]=p; store.savedPlans=JSON.stringify(savedPlans); }
-  return true;
+  if(!p || planPaceMode(p)!=='flexible') return null;
+  return flexibleScheduleState(p);
 }
 
 
@@ -105,14 +93,18 @@ function planProgress(p){
   const pct=seq.length?Math.round(done/seq.length*100):0;
   const day=dayIndexForPlan(p);
   const start=new Date((p.start||'')+'T00:00:00');
+  const flex=planPaceMode(p)==='flexible'?flexibleScheduleState(p,seq):{extension:0};
   const spanDays=p.skipSundays ? (p.calendarDays||365) : (p.days||1);
-  const end=new Date(start); end.setDate(end.getDate()+spanDays-1);
+  const baseEnd=new Date(start); baseEnd.setDate(baseEnd.getDate()+spanDays-1);
+  const baseEndStr=isNaN(baseEnd.getTime())?'':baseEnd.toISOString().slice(0,10);
+  const end=new Date(baseEnd);
+  let extension=flex.extension||0;
+  while(extension>0){end.setDate(end.getDate()+1);if(!p.skipSundays||end.getDay()!==0)extension--;}
   const endStr=isNaN(end.getTime())?'':end.toISOString().slice(0,10);
   const today=new Date(); today.setHours(0,0,0,0);
   let status='진행 중';
-  const calendarDuration=p.skipSundays?(p.calendarDays||p.days||1):(p.days||1);
   const elapsedCalendarDays=isNaN(start.getTime())?0:Math.floor((today-start)/86400000)+1;
-  const expired=elapsedCalendarDays>calendarDuration;
+  const expired=!isNaN(end.getTime())&&today>end;
   if(!isNaN(start.getTime()) && today<start) status='시작 전';
   else if(seq.length>0 && done>=seq.length) status='완료';
   else if(expired) status='기간 종료 · 미완료';
@@ -122,7 +114,7 @@ function planProgress(p){
   const skk=p.skipped||{};
   let skipped=0;
   for(const it of seq){ const k=verseKey(it.book,it.chapter); if(skk[k]&&!planChapterDone(p.id,k)) skipped++; }
-  return {seq, done, total:seq.length, pct, day, endStr, status, backlog, skipped};
+  return {seq, done, total:seq.length, pct, day, endStr, baseEndStr, extensionDays:flex.extension||0, status, backlog, skipped};
 }
 
 function buildSeqForPlan(p){
@@ -167,21 +159,38 @@ function countReadingDaysElapsed(startStr, untilDate, skipSundays){
   }
   return count;
 }
-function dayIndexForPlan(p){
-  const t=new Date(); t.setHours(0,0,0,0);
+function rawPlanReadingDay(p,atDate){
+  const t=new Date(atDate||Date.now());t.setHours(0,0,0,0);
   const startStr=p.start||start;
-  const skip=!!p.skipSundays;
-  if(skip){
-    let d=countReadingDaysElapsed(startStr, t, true);
-    if(d<1) d=1;
-    if(d>p.days) d=p.days;
-    return d;
-  }
+  if(p.skipSundays)return countReadingDaysElapsed(startStr,t,true);
   const s=new Date(startStr+'T00:00:00');
-  let d=Math.floor((t-s)/86400000)+1;
-  if(d<1) d=1;
-  if(d>p.days) d=p.days;
+  return isNaN(s.getTime())?0:Math.floor((t-s)/86400000)+1;
+}
+function flexibleScheduleState(p,seq){
+  const totalDays=Math.max(1,+p.days||1),seqItems=seq||buildSeqForPlan(p),raw=Math.max(1,rawPlanReadingDay(p));
+  if(planPaceMode(p)!=='flexible'||!seqItems.length)return {day:Math.min(raw,totalDays),extension:0,baseDays:totalDays};
+  const upto=Math.min(raw,totalDays),sk=p.skipped||{};let firstIncomplete=0;
+  for(let d=1;d<=upto&&!firstIncomplete;d++){
+    const {a,z}=chapterRangeForDay(d,seqItems.length,totalDays);
+    for(let i=a;i<z;i++){
+      const it=seqItems[i],key=verseKey(it.book,it.chapter);
+      if(!planChapterDone(p.id,key)&&!sk[key]){firstIncomplete=d;break;}
+    }
+  }
+  const day=firstIncomplete||Math.min(raw,totalDays);
+  return {day,extension:Math.max(0,raw-day),baseDays:totalDays};
+}
+function dayIndexForPlan(p){
+  const t=new Date();t.setHours(0,0,0,0);
+  if(planPaceMode(p)==='flexible')return flexibleScheduleState(p).day;
+  let d=rawPlanReadingDay(p);
+  if(d<1)d=1;
+  if(d>p.days)d=p.days;
   return d;
+}
+function chapterRangeForDay(day,total,days){
+  const count=Math.max(0,Number(total)||0), span=Math.max(1,Number(days)||1), d=Math.max(1,Math.min(span,Number(day)||1));
+  return {a:Math.floor((d-1)*count/span),z:Math.floor(d*count/span)};
 }
 function todayItemsForPlan(p){
   const seq=buildSeqForPlan(p);
@@ -200,8 +209,7 @@ function todayItemsForPlan(p){
   // 밀리면 남은 기간에 다시 배분하는 방식
   if(p.catchUp==='follow') return followItemsForPlan(p,seq).map(mk);
   const day=dayIndexForPlan(p);
-  const a=Math.floor((day-1)*total/p.days);
-  const z=Math.max(a+1, Math.floor(day*total/p.days));
+  const {a,z}=chapterRangeForDay(day,total,p.days);
   const items=[];
   for(let i=a;i<Math.min(z,total);i++) items.push(mk(seq[i]));
   return items;
@@ -831,7 +839,7 @@ function markChapter(){
 async function clearCurrentChapter(){let key=verseKey(selectedBook,selectedChapter);if(!(await appConfirm(chLabel(selectedBook,selectedChapter)+'의 읽음 기록을 지울까요?','읽음 기록 삭제')))return;if(activeReadPlanId)setPlanChapterDone(activeReadPlanId,key,false,[]);else{delete verseRead[key];delete chapterRead[key];saveVerseData()}renderChapter()}
 function totalChapters(){return planSeq.length}
 function flatChapter(index){if(index<0)index=0;if(index>=planSeq.length)index=planSeq.length-1;return planSeq[index]}
-function dailyRange(){let elapsed=Math.max(1,Math.floor((Date.now()-new Date(start+'T00:00:00'))/86400000)+1),day=Math.min(days,elapsed),total=totalChapters(),a=Math.floor((day-1)*total/days),z=Math.max(a+1,Math.floor(day*total/days));return{day,a,z}}
+function dailyRange(){let elapsed=Math.max(1,Math.floor((Date.now()-new Date(start+'T00:00:00'))/86400000)+1),day=Math.min(days,elapsed),total=totalChapters(),{a,z}=chapterRangeForDay(day,total,days);return{day,a,z}}
 function openReading(bi, ch, planId){
   if(planId){ setActivePlan(planId); activeReadPlanId=planId; }
   view('read',planId||'');
@@ -842,6 +850,18 @@ function openReading(bi, ch, planId){
   rememberLastRead(selectedBook,selectedChapter);
   loadChapter(false);
   try{ renderReadPlanPreview(); }catch(e){}
+}
+function startItemsForPlan(p){
+  const backlog=backlogForPlan(p).map(it=>({...it,done:false,planName:p.name||'',period:0}));
+  const today=todayItemsForPlan(p);
+  const mode=p.readOrder||'backlogFirst';
+  if(mode==='todayFirst')return [...today,...backlog.filter(b=>!today.some(t=>t.key===b.key))];
+  if(mode==='mix'){
+    const old=backlog.filter(b=>!today.some(t=>t.key===b.key)),out=[];
+    for(let i=0;i<Math.max(old.length,today.length);i++){if(old[i])out.push(old[i]);if(today[i])out.push(today[i]);}
+    return out;
+  }
+  return [...backlog,...today.filter(t=>!backlog.some(b=>b.key===t.key))];
 }
 function renderTodayList(){
   const el=$('todayList');
@@ -884,7 +904,7 @@ function renderHomePlans(){
   el.innerHTML=savedPlans.map((p,idx)=>{
     const pr=planProgress(p);
     const otnt=planOtNtProgress(p);
-    const periodText=(p.start||'')+(pr.endStr?' ~ '+pr.endStr:'')+' · '+p.days+'일';
+    const periodText=(p.start||'')+(pr.endStr?' ~ '+pr.endStr:'')+' · '+p.days+'일'+(planPaceMode(p)==='flexible'?' · 여유 모드: 기본 종료 '+(pr.baseEndStr||'미정')+' → 예상 '+(pr.endStr||'미정')+(pr.extensionDays?' (+'+pr.extensionDays+'일 지연)':' (일정 정상)'):'');
     const active=getActivePlan()&&getActivePlan().id===p.id;
     return '<article class="card home-plan-card'+(active?' is-active':'')+'">'+
       '<div class="home-plan-head">'+
@@ -984,7 +1004,7 @@ function openPlanReading(planId, mode){
   if(!p){ renderReadPlanPreview(); return; }
   let bi=null, ch=null;
   if(mode==='today'){
-    const items=todayItemsForPlan(p);
+    const items=startItemsForPlan(p);
     if(items.length){ bi=items[0].book; ch=items[0].chapter; }
     else {
       const lr=lastReadByPlan[planId];
@@ -1104,14 +1124,32 @@ function renderReadPlanPreview(){
 
   box.innerHTML=html;
 }
-function preview(){days=effectiveDays();start=$('start').value||start;let r=dailyRange(),first=flatChapter(r.a),last=flatChapter(Math.min(totalChapters()-1,r.z-1));
+function preview(){days=effectiveDays();start=$('start').value||start;let r=dailyRange();if(r.z<=r.a){$('preview').innerHTML='<div class="metric">제 '+r.day+'일차 / '+days+'일 · 총 '+totalChapters()+'개 분량</div><p>오늘 배정된 분량이 없습니다. 이 기간에는 읽기 일정이 없는 날이 포함됩니다.</p><div class="progress"><span style="width:'+Math.min(100,r.day/days*100)+'%"></span></div>';return}let first=flatChapter(r.a),last=flatChapter(Math.min(totalChapters()-1,r.z-1));
 let periodHtml='';
 if(planType==='chrono'&&first.period){
   const p=periods[first.period-1];
   periodHtml='<div style="margin:10px 0;padding:10px 12px;border-radius:10px;background:'+p.color+'22;border-left:4px solid '+p.color+'"><b style="color:'+(p.id===12?'#334155':p.color)+'">'+p.name+'</b> <span class="small muted">'+p.desc+'</span></div>';
 }
-$('preview').innerHTML='<div class="metric">제 '+r.day+'일차 / '+days+'일 · 총 '+totalChapters()+'개 분량</div>'+periodHtml+'<p>오늘 권장 분량: '+chLabel(first.book,first.chapter)+(r.z-r.a>1?' – '+chLabel(last.book,last.chapter):'')+' ('+(r.z-r.a)+'개)</p><div class="progress"><span style="width:'+Math.min(100,r.day/days*100)+'%"></span></div>'}
+$('preview').innerHTML='<div class="metric">제 '+r.day+'일차 / '+days+'일 · 총 '+totalChapters()+'개 분량</div>'+periodHtml+'<p>오늘 권장 분량: '+chLabel(first.book,first.chapter)+(r.z-r.a>1?' – '+chLabel(last.book,last.chapter):'')+' ('+(r.z-r.a)+'개)</p><div class="progress"><span style="width:'+Math.min(100,r.day/days*100)+'%"></span></div>';renderPlanSchedulePreview()}
 
+function renderPlanSchedulePreview(){
+  const el=$('planSchedulePreview');if(!el)return;
+  const seq=planSeq.slice(),total=seq.length,duration=Math.max(1,days||effectiveDays()),begin=new Date((start||$('start').value||new Date().toISOString().slice(0,10))+'T00:00:00');
+  if(!total||isNaN(begin.getTime())){el.textContent='범위와 시작일을 선택하면 일정이 여기에 표시됩니다.';return;}
+  let date=new Date(begin),readingDay=1,shown=0,guard=0,html='';
+  const today=new Date();today.setHours(0,0,0,0);
+  while(date<today&&readingDay<duration&&guard++<4000){if(!planSkipSundays||date.getDay()!==0)readingDay++;date.setDate(date.getDate()+1);}
+  while(shown<7&&readingDay<=duration&&guard++<5000){
+    if(!planSkipSundays||date.getDay()!==0){
+      const {a,z}=chapterRangeForDay(readingDay,total,duration);
+      const label=z>a?seq.slice(a,Math.min(z,total)).map(it=>chLabel(it.book,it.chapter)).join(' · '):'배정 분량 없음';
+      html+='<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)"><b style="min-width:92px">'+date.toLocaleDateString('ko-KR',{month:'numeric',day:'numeric',weekday:'short'})+'</b><span>'+safe(label)+'</span></div>';
+      shown++;readingDay++;
+    }
+    date.setDate(date.getDate()+1);
+  }
+  el.innerHTML='<div class="muted" style="margin-bottom:6px">총 '+total+'장 · '+duration+' 읽기일'+(planSkipSundays?' · 주일 제외':'')+'</div>'+(html||'<div class="muted">기간이 끝났거나 미리 볼 날짜가 없습니다.</div>');
+}
 function onDaysChange(){const c=$('days').value==='customDays';$('customDaysWrap').classList.toggle('hidden',!c);preview()}
 
 function renderRangePreview(){
@@ -1246,11 +1284,13 @@ async function editSavedPlan(planId){
   if(editingPlanId){if(!(await appConfirm('현재 편집 중인 변경 사항을 취소하고 다른 계획을 편집할까요?','편집 취소')))return;cancelPlanEdit()}
   const priorEditingId=editingPlanId;
   const formValues={};
-  ['planName','planType','start','autoMode','autoDays','autoPerDay','autoEnd','days','customDays'].forEach(id=>{const el=$(id);if(el)formValues[id]=el.value});
+  ['planName','planType','planReadOrder','planPaceMode','start','autoMode','autoDays','autoPerDay','autoEnd','days','customDays'].forEach(id=>{const el=$(id);if(el)formValues[id]=el.value});
   editingPlanSnapshot={formValues,priorEditingId,activePlanId,planType,customPeriodSet:customPeriodSet.slice(),customBookSet:customBookSet.slice(),planSkipSundays,planCalendarDays,days,start};
   editingPlanId=p.id;
   $('planName').value=p.name||'';
   $('planType').value=p.planType||'all';
+  if($('planReadOrder'))$('planReadOrder').value=p.readOrder||'backlogFirst';
+  if($('planPaceMode'))$('planPaceMode').value=p.paceMode||'fixed';
   customPeriodSet=(p.customPeriodSet||[1,2,3,4,5,6,7,8,9,10,11,12]).slice();
   customBookSet=Array.isArray(p.customBookSet)?p.customBookSet.slice():[...Array(books.length).keys()];
   onPlanTypeChange();
@@ -1427,6 +1467,7 @@ function savePlan(){
     name,planType,days,start,
     skipSundays:!!planSkipSundays,
       paceMode:(($('planPaceMode')||{}).value||'fixed'),
+      readOrder:(($('planReadOrder')||{}).value||'backlogFirst'),
     calendarDays:planSkipSundays?planCalendarDays:null,
     customPeriodSet:customPeriodSet.slice(),
     customBookSet:customBookSet.slice()
@@ -2031,7 +2072,7 @@ function renderPlanItemProgress(){
           '<b style="color:var(--navy)">'+safe(p.name)+'</b>'+
           '<div class="small muted" style="margin-top:3px">'+
             safe(planTypeLabel(p.planType))+' · '+safe(p.start||'')+' 시작'+
-            (pr.endStr?' · '+pr.endStr+'까지':'')+
+            (pr.endStr?' · '+pr.endStr+'까지':'')+(planPaceMode(p)==='flexible'?' · 여유 모드 · 기본 '+safe(pr.baseEndStr)+' → 예상 '+safe(pr.endStr)+(pr.extensionDays?' (+'+pr.extensionDays+'일)':' (일정 정상)'):'')+
             (p.skipSundays?' · 주일 제외':'')+
           '</div>'+
         '</div>'+
@@ -2065,14 +2106,38 @@ function renderPlanItemProgress(){
     '</article>';
   }).join('');
 }
+function renderWeeklySummary(){
+  const el=$('weeklySummary');if(!el)return;
+  if(!savedPlans.length){el.textContent='저장된 통독 계획이 없습니다.';return;}
+  const selected=store.weeklyPlanId||activePlanId||savedPlans[0].id;
+  const p=savedPlans.find(x=>x.id===selected)||savedPlans[0];store.weeklyPlanId=p.id;
+  const map=new Map(planSchedule(p).map(row=>[row.date,row.items]));
+  const today=new Date();today.setHours(0,0,0,0);const monday=new Date(today);monday.setDate(monday.getDate()-(monday.getDay()+6)%7);const sunday=new Date(monday);sunday.setDate(sunday.getDate()+6);
+  let weekTotal=0,weekDone=0;for(let d=new Date(monday);d<=sunday;d.setDate(d.getDate()+1)){const items=map.get(ymdLocal(d))||[];weekTotal+=items.length;weekDone+=items.filter(it=>planChapterDone(p.id,verseKey(it.book,it.chapter))).length;}
+  let streak=0;const byDate=new Map(map);for(let i=0;i<366;i++){const d=new Date(today);d.setDate(today.getDate()-i);const items=byDate.get(ymdLocal(d))||[];if(!items.length)continue;if(items.every(it=>planChapterDone(p.id,verseKey(it.book,it.chapter))))streak++;else break;}
+  const needs=weekTotal>weekDone;
+  el.innerHTML='<label>계획 <select onchange="store.weeklyPlanId=this.value;renderWeeklySummary()">'+savedPlans.map(x=>'<option value="'+safe(x.id)+'" '+(x.id===p.id?'selected':'')+'>'+safe(x.name)+'</option>').join('')+'</select></label><div class="grid" style="margin-top:10px"><div class="card soft-card">이번 주 완료<div class="metric">'+weekDone+' / '+weekTotal+'</div></div><div class="card soft-card">연속 달성 읽기일<div class="metric">'+streak+'일</div></div></div><div class="progress"><span style="width:'+(weekTotal?Math.round(weekDone/weekTotal*100):0)+'%"></span></div><p class="small muted">이번 주 일정 기준으로 계산합니다. '+(planPaceMode(p)==='flexible'?'여유 모드 종료일 조정과는 별도 표기입니다.':'')+'</p>'+(needs&&p.catchUp!=='follow'?'<button type="button" class="alt" data-plan-id="'+safe(p.id)+'" onclick="rebalanceRemainingPlan(this.dataset.planId)">남은 기간에 부족분 자동 재배분</button>':p.catchUp==='follow'?'<div class="small" style="color:var(--ok-text)">남은 분량을 자동 재배분 중입니다.</div>':'');
+}
+function rebalanceRemainingPlan(planId){const p=savedPlans.find(x=>x.id===planId);if(!p)return;p.catchUp='follow';p.snap=null;persistPlans();dashboard();stats();}
+function renderBackupReminder(){
+  const el=$('backupReminder');if(!el)return;
+  const last=store.lastBackupAt?new Date(store.lastBackupAt):null;
+  if(!last||isNaN(last.getTime())){el.innerHTML='JSON 백업을 아직 내보내지 않았습니다. 기기 변경이나 브라우저 데이터 삭제 전에 통독 기록 화면에서 백업해 주세요.';return;}
+  const age=Math.max(0,Math.floor((Date.now()-last.getTime())/86400000));
+  el.innerHTML='마지막 JSON 백업: '+safe(last.toLocaleDateString('ko-KR'))+' ('+age+'일 전)'+(age>=30?' · <b>한 달 이상 지났습니다. 최신 백업을 권장합니다.</b>':'');
+}
 function stats(){
   if($('chartDetails')) $('chartDetails').open = window.innerWidth >= 760;
   updateCharts();
   renderPlanItemProgress();
 
-  const total = Math.max(1, totalChapters());
-  const doneKeys = Object.keys(chapterRead).filter(k => chapterRead[k]);
-  const pct = Math.round(doneKeys.length / total * 100);
+  const total = Math.max(1, books.reduce((n,b)=>n+(Number(b[2])||0),0));
+  const doneKeys = Object.keys(chapterRead).filter(k => {
+    if(!chapterRead[k]) return false;
+    const parts=k.split(':').map(Number), bi=parts[0], ch=parts[1];
+    return Number.isInteger(bi)&&Number.isInteger(ch)&&bi>=0&&bi<books.length&&ch>=1&&ch<=books[bi][2];
+  });
+  const pct = Math.min(100, Math.round(doneKeys.length / total * 100));
   const verseKeys = Object.keys(verseRead);
   const verseCount = verseKeys.reduce((n,k)=>n+(verseRead[k]||[]).length, 0);
   const bookSet = new Set([...verseKeys, ...doneKeys].map(k => k.split(':')[0]));
@@ -2091,7 +2156,7 @@ function stats(){
   if($('sCumUnique')) $('sCumUnique').textContent = uniqueKeys.size;
 
   if($('overallRing')) $('overallRing').style.setProperty('--pct', String(pct));
-  if($('overallRingCaption')) $('overallRingCaption').textContent = doneKeys.length + ' / ' + totalChapters() + '장';
+  if($('overallRingCaption')) $('overallRingCaption').textContent = doneKeys.length + ' / ' + total + '장';
 
   // 구약·신약 텍스트 바 (차트와 병행)
   let otD=0, otT=0, ntD=0, ntT=0;
@@ -2179,6 +2244,7 @@ function gatherBackup(){
   return {
     v:2,
     exportedAt:new Date().toISOString(),
+    lastBackupAt:store.lastBackupAt||'',
     days, start, planType, customPeriods:customPeriodSet, customBooks:customBookSet,
     savedPlans, activePlanId, lastReadByPlan, planReadingState, cumulativeReading,
     chapterRead, verseRead, verseTotal, notes, badgeAwards, badgeCompleteSnap,
@@ -2220,12 +2286,15 @@ function snapshotCurrentForRecovery(){
 
 function exportData(){
   const data=gatherBackup();
+  data.lastBackupAt=new Date().toISOString();
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='malssumgil-backup-'+new Date().toISOString().slice(0,10)+'.json';
   a.click();
   URL.revokeObjectURL(a.href);
+  store.lastBackupAt=new Date().toISOString();
+  renderBackupReminder();
   if($('syncStatus')) $('syncStatus').textContent='JSON 파일을 다운로드했습니다. 다른 기기에서 JSON 가져오기로 불러오세요.';
 }
 async function importData(ev){
@@ -2272,19 +2341,20 @@ async function applyBackup(data,opts){
   if(data.chapterRead) chapterRead=data.chapterRead;
   if(data.verseRead) verseRead=data.verseRead;
   if(data.verseTotal) verseTotal=data.verseTotal;
-  if(data.notes){ notes=data.notes;
+  if(Array.isArray(data.notes)){ notes=data.notes; normalizeNotes(); }
   if(data.badgeAwards&&typeof data.badgeAwards==="object") badgeAwards=data.badgeAwards;
   if(data.badgeCompleteSnap&&typeof data.badgeCompleteSnap==="object") badgeCompleteSnap=data.badgeCompleteSnap;
-  try{saveBadgeState()}catch(e){} normalizeNotes(); }
+  if(data.badgeAwards||data.badgeCompleteSnap){ try{saveBadgeState()}catch(e){} }
   if(data.days) days=+data.days;
   if(data.start) start=data.start;
   if(data.planType) planType=data.planType;
   if(data.customPeriods) customPeriodSet=data.customPeriods;
   if(data.customBooks) customBookSet=data.customBooks;
   if(data.hideNotes!=null) store.hideNotes=data.hideNotes;
+  if(typeof data.lastBackupAt==='string'&&data.lastBackupAt)store.lastBackupAt=data.lastBackupAt;
   // v2 백업: 저장된 통독 계획 · 활성 계획 · 계획별 마지막 읽은 위치 · 읽기 설정
   // (v1 백업에는 없으므로, 없을 때는 현재 기기의 값을 그대로 둡니다)
-  if(Array.isArray(data.savedPlans)){ savedPlans=data.savedPlans.slice(0,5); persistPlans(); }
+  if(Array.isArray(data.savedPlans)){ savedPlans=data.savedPlans.slice(0,4); persistPlans(); }
   if(data.activePlanId!=null) setActivePlan(data.activePlanId);
   if(data.lastReadByPlan&&typeof data.lastReadByPlan==='object'){ lastReadByPlan=data.lastReadByPlan; persistLastRead(); }
   if(data.cumulativeReading&&typeof data.cumulativeReading==='object'){cumulativeReading=data.cumulativeReading;persistCumulativeReading()}
@@ -2750,7 +2820,7 @@ function planSchedule(p){
   while(idx<p.days&&guard++<5000){
     if(!(p.skipSundays&&d.getDay()===0)){
       idx++;
-      const a=Math.floor((idx-1)*total/p.days), z=Math.max(a+1,Math.floor(idx*total/p.days));
+      const {a,z}=chapterRangeForDay(idx,total,p.days);
       if(a<total) out.push({date:ymdLocal(d),day:idx,items:seq.slice(a,Math.min(z,total))});
     }
     d.setDate(d.getDate()+1);

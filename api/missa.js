@@ -209,8 +209,10 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: '이 날짜는 원문 목록에서 찾을 수 없습니다.' });
     }
     const mass = await fetchMass(item);
-    // 본문: 1시간 캐시 (날짜별 고정 콘텐츠)
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // today=1은 KST 날짜가 바뀌면 내용이 달라지므로 공유 캐시를 사용하지 않는다.
+    // 명시적 date 조회만 날짜별 고정 응답으로 캐시한다.
+    if(query.today === '1') res.setHeader('Cache-Control', 'no-store');
+    else res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
     return res.status(200).json({ mass, items: publicItems(items), activeDate: active ? active.date : null, sourceUrl: SOURCE_URL });
   } catch (error) {
     console.error('Daily Mass request failed:', error);

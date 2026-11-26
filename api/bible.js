@@ -51,6 +51,8 @@ module.exports = async function handler(req, res) {
     }
     const html = await upstream.text();
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:");
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
     res.setHeader('X-Bible-Source', 'https://bible.cbck.or.kr/Knb');
     return res.status(200).send(html);

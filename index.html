@@ -25,7 +25,6 @@
 <button type="button" class="active" data-v="home" aria-current="page">오늘의 통독</button>
 <button type="button" data-v="missa">오늘의 말씀</button>
 <button type="button" data-v="notes">묵상 노트</button>
-<button type="button" data-v="verseShelf">구절 보관함</button>
 <button type="button" data-v="badges">통독 인증</button>
 <button type="button" data-v="stats">통독 통계</button>
 <button type="button" data-v="settings">환경 설정</button>
@@ -136,14 +135,6 @@
   </div>
   <div id="chapterStatus" class="small read-status" role="status">본문을 불러올 준비가 되었습니다.</div>
 </div>
-<div class="copybar hidden" id="copyBar">
-  <span class="cnt" id="copyCount">0절 선택</span>
-  <label class="small" style="white-space:nowrap"><input type="checkbox" id="copyNums" checked onchange="store.copyNums=this.checked?'1':'0'"> 절 번호</label>
-  <button type="button" class="alt" onclick="selectAllVerses()">전체</button>
-  <button type="button" onclick="doCopyVerses()">복사</button>
-  <button type="button" class="alt" onclick="openCard({type:'verse'})">카드</button>
-  <button type="button" class="alt" onclick="toggleCopyMode(false)">닫기</button>
-</div>
 <div class="read-typebar" id="readTypeBar">
   <button type="button" class="alt" onclick="nudgeFont(-1)" aria-label="글자 작게">A−</button>
   <button type="button" class="alt" onclick="nudgeFont(1)" aria-label="글자 크게">A+</button>
@@ -155,7 +146,7 @@
   <button type="button" id="btnMarkChDock" onclick="markChapter()">완료</button>
   <button type="button" class="alt" onclick="moveChapter(1)">다음</button>
 </div>
-<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="copyModeBtn" onclick="toggleCopyMode()">구절 복사</button><button type="button" class="alt" id="selectModeBtn" onclick="toggleSelectMode()">구절 선택</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="selectHint" class="notice hidden" style="margin:10px 0">구절을 여러 개 선택해 책갈피·밑줄·메모로 보관합니다. 선택 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="selectBar" class="copybar hidden"><span id="selectCount" class="cnt">0절 선택</span><button type="button" class="alt" onclick="saveSelectedShelf('bookmark')">책갈피</button><button type="button" class="alt" onclick="saveSelectedShelf('highlight')">밑줄</button><button type="button" onclick="saveSelectedShelf('note')">메모</button><button type="button" class="alt" onclick="clearSelectMode()">닫기</button></div><div id="copyHint" class="notice hidden" style="margin:10px 0">복사할 절을 눌러 선택하세요. 이 모드에서는 읽음 표시가 바뀌지 않습니다.</div><div id="chapterCompleteBar" class="chapter-complete-bar hidden" hidden></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h3 id="chapterHeading">성경 본문</h3><div class="row"><button type="button" class="alt" id="focusModeBtn" onclick="toggleFocusMode()">본문 집중</button><button type="button" class="alt" id="selectModeBtn" onclick="toggleSelectMode()">구절 선택</button><span class="small muted">글자·글꼴은 <button type="button" class="alt" style="padding:2px 8px;font-size:12px" onclick="view('settings')">환경 설정</button>에서 바꿀 수 있습니다.</span></div></div><div id="selectHint" class="notice hidden" style="margin:10px 0">본문의 구절을 눌러 선택한 뒤 전체 선택, 복사, 카드 만들기 또는 구절 묵상을 할 수 있습니다.</div><div id="selectBar" class="copybar hidden"><span id="selectCount" class="cnt">0절 선택</span><button type="button" class="alt" onclick="selectAllVerses()">전체</button><button type="button" onclick="doCopyVerses()">복사</button><button type="button" class="alt" onclick="openSelectedVerseCard()">카드</button><button type="button" class="alt" onclick="openSelectedVerseNote()">구절 묵상</button><button type="button" class="alt" onclick="clearSelectMode()">닫기</button></div><div id="chapterCompleteBar" class="chapter-complete-bar hidden" hidden></div>
 <div id="bibleText" class="bible-text bible-verses"><p class="muted">성경의 책과 장을 선택하면 본문이 표시됩니다.</p></div><p class="small">절을 누르면 읽음 표시가 저장됩니다. 다시 누르면 표시가 해제됩니다. 본문은 장별로 이 기기의 브라우저에 보관됩니다.</p></div>
 <p class="small">성경 본문 출처: <a href="https://bible.cbck.or.kr/Knb" target="_blank" rel="noopener">한국천주교주교회의 성경</a>. 앱 내 본문 저장 및 이용은 승인된 사용 범위에 따라 운영합니다.</p></section>
 <section id="plan" class="hidden"><div class="eyebrow">READING PLAN</div><div class="h1">나만의 통독 계획</div>
@@ -288,38 +279,29 @@
 <section id="notes" class="hidden">
 <div class="eyebrow">LECTIO DIVINA</div>
 <div class="h1">묵상 노트</div>
-<p class="muted">오늘의 한 줄과 오늘의 묵상을 나누어 기록합니다. 성경 읽기에서 절의 「오늘의 한 줄」로도 남길 수 있습니다.</p>
-
-<div class="card notes-line-card" id="homeOneLine">
-  <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
-    <b style="color:var(--navy)">오늘의 한 줄</b>
-    <span class="small muted" id="oneLineStreak"></span>
-  </div>
-  <p class="small muted" style="margin:6px 0 0">선택한 성경 본문과 마음에 남은 한 줄을 함께 남깁니다.</p>
-  <div id="oneLineScripture" class="one-line-scripture muted">성경 읽기에서 절을 고르거나, 아래에서 구절을 적어 주세요.</div>
-  <label class="small" style="display:block;margin-top:10px">성경 구절
-    <input id="oneLineVerse" placeholder="예: 요한 3,16" style="width:100%;margin-top:4px" oninput="this.dataset.touched='1'; updateOneLineScripturePreview()">
-  </label>
-  <label class="small" style="display:block;margin-top:10px">마음에 남은 한 줄
-    <input id="oneLine" placeholder="오늘 마음에 남은 한 줄" maxlength="200" style="width:100%;margin-top:4px" onkeydown="if(event.key==='Enter'){event.preventDefault();saveOneLine()}">
-  </label>
-  <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
-    <button type="button" onclick="saveOneLine()">한 줄 기록</button>
-    <button type="button" class="alt" onclick="view('read')">성경 읽기에서 고르기</button>
-  </div>
-  <div id="oneLineRecent" style="margin-top:12px"></div>
-</div>
+<p class="muted">오늘의 묵상과 성경 구절 묵상을 기록하고, 저장된 기록을 한곳에서 관리합니다.</p>
 
 <div class="card notes-meditation-card">
   <b style="color:var(--navy);display:block;margin-bottom:8px">오늘의 묵상</b>
   <p class="small muted" style="margin:0 0 10px">날짜·구절·묵상·실천 다짐을 남깁니다.</p>
   <label>날짜 <input type="date" id="ndate"></label>
-  <p style="margin-top:8px"><input id="verse" placeholder="성경 구절 예: 창세기 1,1" style="width:100%"></p>
+  <p style="margin-top:8px"><input id="verse" placeholder="성경 구절 예: 창세기 1,1" style="width:100%" readonly></p>
+  <button type="button" class="alt" onclick="chooseVerseForNote()">성경 구절 선택</button>
+  <div id="noteVersePreview" class="notice small" style="margin-top:8px">아직 선택한 성경 구절이 없습니다.</div>
   <label>말씀과 묵상</label>
   <textarea id="reflection"></textarea>
   <p><label>실천 다짐</label></p>
   <textarea id="resolution"></textarea>
   <p style="margin-top:10px"><button type="button" onclick="saveNote()">묵상 저장</button></p>
+</div>
+
+
+<div class="card notes-line-card" id="verseMeditationSection">
+  <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+    <b style="color:var(--navy)">구절 묵상</b>
+  </div>
+  <p class="small muted" style="margin:6px 0 0">성경 읽기에서 구절을 선택하고, 말씀과 함께 메모를 남긴 기록입니다.</p>
+  <div id="verseMeditationList" style="margin-top:12px"></div>
 </div>
 
 <div class="card">
@@ -334,7 +316,7 @@
   </div>
   <div class="row" id="noteChips" style="margin-top:8px;gap:6px">
     <button type="button" class="alt chip on" data-f="all" onclick="setNoteFilter('all')">전체</button>
-    <button type="button" class="alt chip" data-f="line" onclick="setNoteFilter('line')">오늘의 한 줄</button>
+    <button type="button" class="alt chip" data-f="verse" onclick="setNoteFilter('verse')">구절 묵상</button>
     <button type="button" class="alt chip" data-f="note" onclick="setNoteFilter('note')">오늘의 묵상</button>
   </div>
   <div id="noteList" style="margin-top:10px"></div>
@@ -515,7 +497,7 @@
 </div>
 </section>
 
-<section id="verseShelf" class="hidden"><div class="eyebrow">SAVED VERSES</div><div class="h1">구절 보관함</div><p class="muted">책갈피·밑줄·메모는 이 기기에만 저장됩니다.</p><div class="card"><div class="row"><input id="verseShelfSearch" type="search" placeholder="구절·메모 검색" oninput="renderVerseShelf()"><select id="verseShelfFilter" onchange="renderVerseShelf()"><option value="all">전체</option><option value="bookmark">책갈피</option><option value="highlight">밑줄</option><option value="note">메모</option></select></div><div id="verseShelfList" style="margin-top:12px"></div></div></section>
+
 </main>
 <div class="modal hidden" id="onboardModal" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
   <div class="modal-box" style="max-width:420px">
@@ -585,14 +567,14 @@
 <div class="modal hidden" id="verseNoteModal" onclick="if(event.target===this)closeVerseNote()" aria-hidden="true">
   <section class="modal-box" role="dialog" aria-modal="true" aria-labelledby="verseNoteTitle">
     <div class="row" style="justify-content:space-between;align-items:center">
-      <div><div class="eyebrow">TODAY'S LINE</div><h2 id="verseNoteTitle" style="font:24px Georgia;color:var(--navy);margin:4px 0">오늘의 한 줄</h2></div>
+      <div><div class="eyebrow">VERSE MEDITATION</div><h2 id="verseNoteTitle" style="font:24px Georgia;color:var(--navy);margin:4px 0">구절 묵상</h2></div>
       <button type="button" class="alt" style="padding:6px 12px" onclick="closeVerseNote()">닫기</button>
     </div>
     <div class="notice" style="margin:12px 0"><b id="verseNoteRef"></b><div id="verseNoteText" style="margin-top:5px;white-space:pre-wrap"></div></div>
-    <label for="verseNoteInput" class="small" style="display:block;margin-bottom:5px;color:var(--navy);font-weight:600">마음에 남은 한 줄</label>
-    <textarea id="verseNoteInput" maxlength="200" rows="3" placeholder="이 구절에서 마음에 남은 것을 적어 보세요." oninput="updateVerseNoteCount()"></textarea>
+    <label for="verseNoteInput" class="small" style="display:block;margin-bottom:5px;color:var(--navy);font-weight:600">메모 · 구절 묵상</label>
+    <textarea id="verseNoteInput" maxlength="200" rows="3" placeholder="선택한 성경 구절을 읽고 떠오른 묵상이나 메모를 적어 보세요." oninput="updateVerseNoteCount()"></textarea>
     <div class="row" style="justify-content:space-between;margin-top:6px">
-      <span class="small muted">묵상 노트 · 오늘의 한 줄에서 다시 볼 수 있습니다.</span><span class="small muted" id="verseNoteCount">0/200</span>
+      <span class="small muted">묵상 노트 · 구절 묵상에서 다시 볼 수 있습니다.</span><span class="small muted" id="verseNoteCount">0/200</span>
     </div>
     <div class="row" style="justify-content:flex-end;margin-top:12px">
       <button type="button" class="alt" onclick="closeVerseNote()">취소</button>

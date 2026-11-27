@@ -56,9 +56,6 @@ textarea{width:100%;min-height:90px}.row{display:flex;gap:9px;align-items:center
 .copybar{position:fixed;z-index:45;background:color-mix(in srgb, var(--surface) 96%, transparent);backdrop-filter:blur(8px);border:1px solid var(--line);box-shadow:0 -2px 16px #00000026;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;left:50%;transform:translateX(-50%);bottom:12px;width:min(680px,calc(100% - 24px));border-radius:12px}
 .copybar button{padding:8px 12px;font-size:13px}
 .copybar .cnt{font-weight:600;color:var(--navy);flex:1;min-width:84px}
-body.copy-mode .read-dock{display:none!important}
-body.copy-mode main{padding-bottom:130px}
-#copyModeBtn.on{background:var(--gold);color:#fff}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#172b43ee;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:90;max-width:88vw;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}
 .toast.show{opacity:1}
 .chip{padding:6px 12px;font-size:13px;border-radius:999px}.chip.on{background:var(--navy);color:#fff}
